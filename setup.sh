@@ -274,7 +274,7 @@ fi
 ROUTING=""
 [ "$M_GROQ" = 1 ] && ROUTING+="groq (gpt-oss-120b, ~500 rpm, 8000 tpm cap) for report writing, vuln explanations, and skeptical validation. "
 [ "$M_NEMO" = 1 ] && ROUTING+="nemotron (nvidia, 1M ctx) for bulk reading of large files. "
-[ "$M_GROK" = 1 ] && ROUTING+="grok (x-ai, 2M ctx) for permissive high-context security reasoning when Gemini refuses. "
+[ "$M_GROK" = 1 ] && ROUTING+="grok (x-ai/grok-4.3, 1M ctx) for permissive high-context security reasoning when Gemini refuses. "
 [ "$M_FLSH" = 1 ] && ROUTING+="flash (gemini-3.6-flash, 1M ctx) for fast structured extraction. "
 [ "$M_ORFR" = 1 ] && ROUTING+="or-free (OpenRouter meta-router, 200K ctx) as generalist fallback. "
 [ "$M_PRO" = 1 ]  && ROUTING+="pro (gemini-3.1-pro-preview) for deep-reasoning fallback and adversarial debate via mcp__pal__challenge. "
@@ -540,7 +540,34 @@ register_pal() {
 }
 checkpoint pal_register "PAL MCP registration" register_pal
 
+# ---------- 11b. sanity-check: do the auto-loaded skills actually exist? ----------
+# A hook that orders Skill(x) for a skill that is not installed makes every session start
+# with a failing tool call, and nothing in the error says which skill or where to get it.
+if [ "$ORCH" = "c" ]; then
+  SKILL_DIRS="$HOME/.claude/skills"
+  [ "$SCOPE" = "p" ] && SKILL_DIRS="$PWD/.claude/skills $SKILL_DIRS"
+  skill_present () {
+    local name="$1" d
+    # shellcheck disable=SC2086 -- SKILL_DIRS is a deliberate space-separated list
+    for d in $SKILL_DIRS; do [ -e "$d/$name/SKILL.md" ] && return 0; done
+    return 1
+  }
+  for pair in "$S_CAVE:caveman" "$S_PENT:pentesting-agent" "$S_VALI:validator"; do
+    sel="${pair%%:*}"; name="${pair#*:}"
+    [ "$sel" = 1 ] || continue
+    if skill_present "$name"; then
+      ok "skill present: $name"
+    else
+      warn "skill NOT found: $name (looked in: $SKILL_DIRS)"
+      [ "$name" = caveman ] && warn "  get it from https://github.com/JuliusBrussee/caveman"
+      warn "  every session will open with a failing Skill($name) call until you install it."
+    fi
+  done
+fi
+
 # ---------- 12. API keys ----------
+
+
 NEEDS_ENV=0
 for f in "$M_GROQ" "$M_NEMO" "$M_GROK" "$M_FLSH" "$M_ORFR" "$M_PRO"; do
   [ "$f" = 1 ] && NEEDS_ENV=1

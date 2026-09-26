@@ -146,7 +146,7 @@ Both adapted from [amElnagdy/review-skills](https://github.com/amElnagdy/review-
 │           v                                                                │
 │    parse route?                                                            │
 │      +---- deterministic  ->  jq / grep locally (0 tokens)                 │
-│      +---- LLM reasoning  ->  PAL(grok, 2M ctx)                            │
+│      +---- LLM reasoning  ->  PAL(grok 1M, paid; else nemotron-ultra 1M)   │
 │      +---- huge JS bundle ->  PAL(nemotron, 1M ctx)                        │
 │      +---- structured     ->  PAL(flash) -> fallback or-free               │
 │      +---- report writeup ->  PAL(groq) -> Claude byte-checks              │

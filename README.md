@@ -40,10 +40,10 @@ flowchart TD
     U[user prompt<br/>+ recon output / files] --> R{classify task}
     R -->|report writing /<br/>vuln explanation /<br/>skeptical validation| GRQ[groq<br/>gpt-oss-120b<br/>~500 rpm · 8k tpm]
     R -->|bulk read of<br/>logs / large scans| NEM[nemotron<br/>NVIDIA · 1M ctx<br/>NOT for JSON schema]
-    R -->|permissive security<br/>reasoning /<br/>Gemini refused| GRK[grok<br/>x-ai · 2M ctx]
+    R -->|permissive security<br/>reasoning /<br/>Gemini refused| GRK[grok<br/>x-ai grok-4.3 · 1M · paid<br/>nemotron-ultra if no credits]
     R -->|structured extract<br/>API / config /<br/>OpenAPI| FLS[flash<br/>Gemini 3.6-flash · 1M ctx<br/>refuses named recon]
     R -->|generic fallback| ORF[or-free<br/>OpenRouter meta-router]
-    R -->|adversarial debate /<br/>deep chain analysis| PRO[pro<br/>Gemini 3 Pro preview]
+    R -->|adversarial debate /<br/>deep chain analysis| PRO[pro<br/>Gemini 3.1 Pro preview]
     GRQ & NEM & GRK & FLS & ORF & PRO --> V{envelope /<br/>refusal check}
     V -->|clean| OUT[to orchestrator<br/>severity + safety<br/>side-effects stay here]
     V -->|classifier refused /<br/>rate limited| RT[re-route to next]
@@ -67,7 +67,7 @@ flowchart TD
                 ▼    ▼    ▼    ▼    ▼    ▼
               groq  nemo   grok  flash  or-free   pro
               gpt-  NVIDIA x-ai  Gemini  OR meta  Gemini 3
-              oss-  1M     2M    3.6-    router   Pro pre
+              oss-  1M     1M    3.6-    router   Pro pre
               120b  ctx    ctx   flash   200K     (challenge)
                 │    │    │    │    │    │
                 └────┴────┴─┬──┴────┴────┘
