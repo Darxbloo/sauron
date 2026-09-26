@@ -71,6 +71,11 @@ The doctrine is enforced by two hooks in `~/.claude/settings.json`, both shipped
 - **Rule 4 (don't re-delegate):** never delegate the same task twice. If groq already drafted section X, quote it inline; do not re-ask.
 - **Rule 5 (don't re-Read):** never `Read` a file already Read this session. Recall the content from conversation context.
 - **Rule 6 (preempt predictable bloat):** on Bash calls whose full output you don't need, append `| head -c 5000` or `| jq -c` at the shell level rather than reading the whole dump and then summarizing.
+- **Rule 7 (failure-map cache):** on any PAL refusal or 4xx/5xx, tag `$model refused $task-class this session` and skip that model for the next similar task in this conversation. Do not retry the failing route inside one turn. Very common: groq classifier-refuses raw exploit code -> next similar request routes straight to grok or or-free.
+- **Rule 8 (delta-first for scan review):** for any "what changed on target", "recheck endpoint", "diff last scan" request, run `diff <last>.json <curr>.json` (or jq -deep) first and reason from the delta. Only read the full scan when the delta is insufficient.
+- **Rule 9 (response terseness ladder):** Level 1 (one-liner) for self-explanatory findings / SHAs / URLs; Level 2 (short paragraph) for 1-2 non-obvious decisions; Level 3 (detailed section) only on explicit request or for a written security report. Never default to Level 3.
+- **Rule 10 (preempt shell bloat):** cap tool output over 5 KB at the shell layer. Recon patterns: `nuclei ... -jsonl | head -100`, `subfinder ... | wc -l` first-then-head, `dnsx ... | jq -c 'select(.a)' | head -50`, `ffuf -mc 200 -of json | jq -c '.results[] | {url,status}' | head -100`.
+- **Rule 11 (route-plan pre-flight, speculative):** for tasks with 3 or more distinct sub-steps, issue a small groq call (~200 tokens) FIRST asking for a routing plan; then execute. Measure impact; drop if overhead exceeds savings on tasks under 5 sub-steps.
 
 ## Auto-detect delegation triggers
 Auto-invoke pal-router BEFORE reading when you see:

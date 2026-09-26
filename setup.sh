@@ -307,6 +307,38 @@ if [ -n "$CLAUDE_MD" ]; then
     cp "$CLAUDE_MD" "${CLAUDE_MD}.bak.$(date +%s)"
     ok "backed up existing CLAUDE.md"
   fi
+  # NEW-6: multi-framework detection. If a sibling (let-there-be-light) block is
+  # already present, write a lean block that references it instead of duplicating
+  # the shared sections. Framework-specific bits stay here.
+  SIBLING_PRESENT=0
+  if [ -f "$CLAUDE_MD" ] && grep -q '<!-- BEGIN let-there-be-light doctrine' "$CLAUDE_MD"; then
+    SIBLING_PRESENT=1
+    ok "detected sibling doctrine (let-there-be-light); writing lean sauron block"
+  fi
+if [ "$SIBLING_PRESENT" = 1 ]; then
+  DOC_BLOCK=$(cat <<CLAUDEMD
+
+<!-- BEGIN sauron doctrine (managed by setup.sh; sibling: let-there-be-light) -->
+# sauron doctrine (lean; shared rules provided by sibling block)
+
+Sibling framework \`let-there-be-light\` supplies: delegate-first routing, keep-in-Claude list, failover doctrine, token-efficiency rules, response terseness ladder, preempt-shell-bloat rules, failure-map, and route-plan pre-flight. Those apply here too.
+
+## 4-step validation pipeline (sauron variant: per confirmed finding, before report)
+A. Stress-test via validator skill (false-positive check, reproducibility, evidence gaps, confidence).
+B. Run gap tests, negative controls, and live observations the validator flags.
+C. Adversarial challenge via mcp__pal__challenge (pro primary, groq fallback): severity, exploitability, chain viability, impact ceiling.
+D. Synthesize with confidence markers; groq drafts the report, Claude spot-checks low-confidence claims only.
+
+## Recon-work strategy (delta-first)
+- For any "what changed on target" or "diff last scan" request, run \`diff\` on the last two scan outputs first.
+- Read a full scan only when the delta is insufficient to judge exploitability.
+
+## Preloaded skills
+${SKILLS_LIST:-(none preloaded; all skills lazy-load on trigger phrase)}
+<!-- END sauron doctrine -->
+CLAUDEMD
+)
+else
   DOC_BLOCK=$(cat <<CLAUDEMD
 
 <!-- BEGIN sauron doctrine (managed by setup.sh; regenerate to update) -->
@@ -340,12 +372,42 @@ D. Synthesize with confidence markers; groq drafts the report, Claude spot-check
 - Never delegate the same task twice; cache the result inline in the conversation.
 - Terser confirmations when a diff or file speaks for itself; not every action needs a paragraph.
 
+## Response terseness ladder
+- Level 1 (one-liner): use when a diff, SHA, file identifier, or one measurable result is the answer.
+- Level 2 (short paragraph): use for 1-2 non-obvious decisions or a short summary of a multi-step task.
+- Level 3 (detailed section): only for architecture design, security findings, or an explicit user request for detail.
+- Rule: never default to Level 3. The user asks for it. Under-explaining is cheaper to fix than over-explaining.
+
+## Recon-work strategy (diff-first / delta-first)
+- For any "what changed on target", "recheck this endpoint", "diff last scan" request, use \`diff\` on the last two scan outputs and reason from the delta.
+- Read a full scan output only when the delta is insufficient to judge exploitability.
+- On repeat scans across many targets, this saves reading N full nuclei/subfinder dumps.
+
+## Preempt predictable bloat at the shell
+- If you already know a tool will emit over 5 KB, cap it in the shell rather than reading + then compressing.
+- Examples:
+  - \`nuclei ... -jsonl | head -100\`
+  - \`subfinder ... | wc -l\` first, then \`head -c 5000\` if huge
+  - \`dnsx ... | jq -c 'select(.a)' | head -50\`
+  - \`ffuf ... -mc 200 -of json | jq -c '.results[] | {url, status}' | head -100\`
+
+## In-conversation failure-map
+- On any PAL refusal or 4xx/5xx response, tag \"\$model refused \$task-class this session\".
+- Skip that model for the next similar task in the same conversation. Do not retry the failing route inside one turn.
+- Common: groq classifier-refuses raw exploit code -> next similar request routes straight to grok or or-free.
+
+## Route-plan pre-flight (speculative, measure before generalizing)
+- For any task with 3 or more distinct sub-steps, first fire a small groq call (~200 tokens) asking for a routing plan.
+- Then execute the plan.
+- If the plan overhead exceeds the saving on tasks under 5 sub-steps, drop this rule.
+
 ## Preloaded skills
 ${SKILLS_LIST:-(none preloaded; all skills lazy-load on trigger phrase)}
 Other skill bodies load only when their trigger phrase appears.
 <!-- END sauron doctrine -->
 CLAUDEMD
 )
+fi
   if [ -f "$CLAUDE_MD" ]; then
     awk '
       BEGIN{skip=0}
@@ -356,6 +418,15 @@ CLAUDEMD
   fi
   printf '%s\n' "$DOC_BLOCK" >> "$CLAUDE_MD"
   ok "wrote CLAUDE.md doctrine: $CLAUDE_MD"
+
+  # NEW-7 (LazyDoc): warn if CLAUDE.md exceeds 5 KB; suggest compression pass.
+  CLAUDE_MD_SIZE=$(wc -c < "$CLAUDE_MD")
+  if [ "$CLAUDE_MD_SIZE" -gt 5120 ]; then
+    warn "CLAUDE.md is ${CLAUDE_MD_SIZE} bytes (over 5 KB threshold)."
+    warn "  Every session loads this file. Consider compressing via PAL caveman mode:"
+    warn "    Skill(caveman) then ask groq to compress the managed blocks."
+    warn "  Or manually trim: your appended blocks are marked by <!-- BEGIN ... -->."
+  fi
 fi
 
 # ---------- 6b. optional: symlink shipped skills so Claude Code can discover them ----------
