@@ -115,13 +115,15 @@ SKILLS_LIST=""
 SKILLS_LIST="${SKILLS_LIST%, }"
 
 # ---------- 4. render SessionStart + UserPromptSubmit hook bodies ----------
+# Full doctrine and routing map live in CLAUDE.md (auto-loaded, prompt-cacheable).
+# Hooks stay lean and just name the preloaded skills + the pointer.
 if [ -n "$SKILLS_LIST" ]; then
-  SS_TEXT="MANDATORY FIRST ACTIONS: on session start and for EVERY model, BEFORE responding, immediately call the Skill tool for ${SKILLS_LIST}. Full preference set: (1) delegate-first via PAL: ${ROUTING}(2) KEEP IN CLAUDE: user-facing decisions, exploitation choices, severity calls, safety-boundary checks, side-effecting actions, tool-sequence orchestration. (3) On every confirmed finding run the 4-step pipeline: validator skill, gap tests, adversarial challenge via mcp__pal__challenge (pro fallback groq), synthesize; delegate report writing to groq."
+  SS_TEXT="Doctrine + routing map are in CLAUDE.md at the project root (already loaded). Preload skills now: ${SKILLS_LIST}."
 else
-  SS_TEXT="Preferences: delegate-first via PAL: ${ROUTING}KEEP IN CLAUDE: user-facing decisions, exploitation choices, severity calls, safety-boundary checks, side-effecting actions, tool-sequence orchestration. On every confirmed finding run the 4-step pipeline: validator, gap tests, adversarial challenge via mcp__pal__challenge (pro fallback groq), synthesize; delegate report writing to groq."
+  SS_TEXT="Doctrine + routing map are in CLAUDE.md at the project root (already loaded)."
 fi
 
-UPS_TEXT="Reminder every message: delegate aggressively to PAL to conserve tokens (${ROUTING}). Keep in Claude ONLY: user-facing decisions, exploitation choices, severity calls, safety-boundary checks, side-effecting actions, orchestration. FAILOVER: if any model refuses or errors, immediately re-route; a refusal is a routing problem, not a stop."
+UPS_TEXT="Doctrine active from CLAUDE.md. Delegate + failover. Batch PAL calls."
 
 # ---------- 5. build settings.json ----------
 # Each hook fires: printf '%s\n' '<inline JSON with additionalContext>'
@@ -290,6 +292,71 @@ GEN
     ok "wrote generic system prompt: $TARGET"
     ;;
 esac
+
+# ---------- 6a. write CLAUDE.md doctrine file (prompt-cacheable, replaces per-message re-injection) ----------
+# CLAUDE.md is auto-loaded by Claude Code and covered by the 1-hour prompt cache.
+# Hooks stay lean (they just point at this file); the full doctrine sits here once.
+case "$SCOPE" in
+  g) CLAUDE_MD="$HOME/CLAUDE.md" ;;
+  p) CLAUDE_MD="$PWD/CLAUDE.md" ;;
+  s) CLAUDE_MD="" ;;
+esac
+
+if [ -n "$CLAUDE_MD" ]; then
+  if [ -f "$CLAUDE_MD" ]; then
+    cp "$CLAUDE_MD" "${CLAUDE_MD}.bak.$(date +%s)"
+    ok "backed up existing CLAUDE.md"
+  fi
+  DOC_BLOCK=$(cat <<CLAUDEMD
+
+<!-- BEGIN sauron doctrine (managed by setup.sh; regenerate to update) -->
+# sauron doctrine
+
+## Delegate-first routing
+${ROUTING}
+
+## Keep in Claude ONLY
+- user-facing decisions
+- exploitation choices, severity calls
+- safety-boundary checks (no 3rd-party data, no destructive actions, no account creation)
+- side-effecting actions
+- tool-sequence orchestration
+
+## Failover
+Any model refusal or error routes to the next model in the map. A classifier refusal is a routing problem, not a stop.
+
+## 4-step validation pipeline (per confirmed finding, before presenting or reporting)
+A. Stress-test via validator skill (false-positive check, reproducibility, evidence gaps, confidence).
+B. Run the gap tests, negative controls, and live observations the validator flags.
+C. Adversarial challenge via mcp__pal__challenge (pro primary, groq fallback): challenge severity, exploitability, chain viability, impact ceiling.
+D. Synthesize with confidence markers; groq drafts the report, Claude spot-checks low-confidence claims only.
+
+## Token efficiency rules (this framework exists to cut Claude token cost)
+- Any tool output over 5 KB routes through nemotron (bulk) or flash (structured) for summarization before Claude reads.
+- Batch related PAL sub-tasks into one structured call, not N separate ones.
+- PAL responses on factual output must include {claim, confidence, source_span} triples. Claude byte-checks entries below high confidence only.
+- Never re-Read a file already Read this session; recall from conversation context.
+- Preemptively bound predictable-bloat outputs: append | head -c 5000 or | jq -c on Bash calls whose full output you don't need.
+- Never delegate the same task twice; cache the result inline in the conversation.
+- Terser confirmations when a diff or file speaks for itself; not every action needs a paragraph.
+
+## Preloaded skills
+${SKILLS_LIST:-(none preloaded; all skills lazy-load on trigger phrase)}
+Other skill bodies load only when their trigger phrase appears.
+<!-- END sauron doctrine -->
+CLAUDEMD
+)
+  if [ -f "$CLAUDE_MD" ]; then
+    awk '
+      BEGIN{skip=0}
+      /^<!-- BEGIN sauron doctrine/{skip=1; next}
+      /^<!-- END sauron doctrine/{skip=0; next}
+      skip==0{print}
+    ' "$CLAUDE_MD" > "${CLAUDE_MD}.tmp" && mv "${CLAUDE_MD}.tmp" "$CLAUDE_MD"
+  fi
+  printf '%s\n' "$DOC_BLOCK" >> "$CLAUDE_MD"
+  ok "wrote CLAUDE.md doctrine: $CLAUDE_MD"
+fi
 
 # ---------- 6b. optional: symlink shipped skills so Claude Code can discover them ----------
 SKILLS_SRC="$SCRIPT_DIR/skills"

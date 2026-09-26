@@ -63,5 +63,27 @@ The doctrine is enforced by two hooks in `~/.claude/settings.json`, both shipped
 - Never trust nemotron to produce byte-exact structured output.
 - Never treat a refusal as the end of the task; re-route.
 
+## Token efficiency rules
+
+- **Rule 1 (auto-compress large outputs):** any tool output above 5 KB (Bash, Read, WebFetch, jq) routes through `nemotron` (bulk read) or `flash` (structured) for compression before Claude reads it. Typical 10x reduction.
+- **Rule 2 (batch PAL sub-tasks):** three separate groq calls for "draft report + suggest severity words + explain bug class" costs three adjudicate cycles. One structured PAL call returning all three saves two round trips.
+- **Rule 3 (confidence triples):** on factual output, delegation prompts must ask for `{claim, confidence, source_span}` triples. Claude byte-checks only entries flagged below high confidence, not the whole draft.
+- **Rule 4 (don't re-delegate):** never delegate the same task twice. If groq already drafted section X, quote it inline; do not re-ask.
+- **Rule 5 (don't re-Read):** never `Read` a file already Read this session. Recall the content from conversation context.
+- **Rule 6 (preempt predictable bloat):** on Bash calls whose full output you don't need, append `| head -c 5000` or `| jq -c` at the shell level rather than reading the whole dump and then summarizing.
+
+## Auto-detect delegation triggers
+Auto-invoke pal-router BEFORE reading when you see:
+- A file open > 5 KB (`Read` with no `limit` on a large file)
+- Any WebFetch call
+- Bash output over 100 lines
+- Any recon-tool result set (nuclei, dnsx, subfinder JSON) larger than 5 KB
+- Any long-form prose request ("explain", "write up", "draft the report")
+
+## When NOT to delegate
+- The user asked for YOUR opinion or judgment (severity, chain viability, exploitability)
+- A safety-boundary call (no 3rd-party data, no destructive action, no account creation)
+- One-off short strings (< 200 bytes); PAL round-trip overhead dwarfs the saving
+
 ## The rule
 > Delegate the prose, never the evidence.
