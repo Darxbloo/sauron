@@ -369,7 +369,7 @@ if [ "$ORCH" != "c" ] && [ -d "$SKILLS_SRC" ]; then
   esac
 fi
 
-# ---------- 7. .env template for API keys ----------
+# ---------- 7. .env handling: template + optional interactive key entry ----------
 NEEDS_ENV=0
 [ "$M_GROQ" = 1 ] && NEEDS_ENV=1
 [ "$M_NEMO" = 1 ] && NEEDS_ENV=1
@@ -377,16 +377,89 @@ NEEDS_ENV=0
 [ "$M_FLSH" = 1 ] && NEEDS_ENV=1
 [ "$M_ORFR" = 1 ] && NEEDS_ENV=1
 [ "$M_PRO" = 1 ] && NEEDS_ENV=1
+
 if [ "$NEEDS_ENV" = 1 ]; then
-  ENV_PATH="$(dirname "$TARGET")/.env.sauron.example"
-  cat > "$ENV_PATH" <<EOF
+  ENV_EXAMPLE="$(dirname "$TARGET")/.env.sauron.example"
+  ENV_REAL="$(dirname "$TARGET")/.env.sauron"
+
+  cat > "$ENV_EXAMPLE" <<EOF
 # sauron API keys - source this from your shell rc, or export before starting Claude Code.
 # Do NOT commit the real values.
 $( [ "$M_FLSH" = 1 ] || [ "$M_PRO" = 1 ] && echo "export GEMINI_API_KEY=your-gemini-key" )
 $( [ "$M_NEMO" = 1 ] || [ "$M_GROK" = 1 ] || [ "$M_ORFR" = 1 ] && echo "export OPENROUTER_API_KEY=your-openrouter-key" )
 $( [ "$M_GROQ" = 1 ] && printf '%s\n' "export CUSTOM_API_URL=https://api.groq.com/openai/v1" "export CUSTOM_API_KEY=your-groq-key" )
 EOF
-  ok "wrote env template: $ENV_PATH"
+  ok "wrote env template: $ENV_EXAMPLE"
+
+  hd "7. Enter API keys now to complete installation?"
+  say "  You can skip and edit $(basename "$ENV_EXAMPLE") later, or enter them now"
+  say "  to have a real .env.sauron written with 0600 permissions."
+  ASK_KEYS=$(prompt_yn "enter API keys now?" y)
+
+  GROQ_KEY=""; OR_KEY=""; GEMINI_KEY=""
+
+  if [ "$ASK_KEYS" = 1 ]; then
+    if [ "$M_GROQ" = 1 ]; then
+      hd "  ${GLD}Groq${RST} (report writing, validation)"
+      say "    ${DIM}How to get one:${RST}"
+      say "      1. Open ${CYN}https://console.groq.com/keys${RST}"
+      say "      2. Sign in with Google or GitHub"
+      say "      3. Click 'Create API Key', name it 'sauron'"
+      say "      4. Copy the key (starts with 'gsk_')"
+      say "    ${DIM}Free tier: gpt-oss-120b with ~500 rpm.${RST}"
+      read -rsp "    paste Groq key (input hidden, ENTER to skip): " GROQ_KEY; echo
+      GROQ_KEY=$(printf '%s' "$GROQ_KEY" | tr -d '[:space:]')
+    fi
+    if [ "$M_NEMO" = 1 ] || [ "$M_GROK" = 1 ] || [ "$M_ORFR" = 1 ]; then
+      hd "  ${GLD}OpenRouter${RST} (nemotron / grok / or-free share one key; grok is your permissive high-context workhorse for security research)"
+      say "    ${DIM}How to get one:${RST}"
+      say "      1. Open ${CYN}https://openrouter.ai/settings/keys${RST}"
+      say "      2. Sign in with Google or GitHub"
+      say "      3. Click 'Create Key', name it 'sauron'"
+      say "      4. Copy the key (starts with 'sk-or-v1-')"
+      say "    ${DIM}Free-tier models (nemotron, grok-fast, meta-router) don't require credit.${RST}"
+      read -rsp "    paste OpenRouter key (input hidden, ENTER to skip): " OR_KEY; echo
+      OR_KEY=$(printf '%s' "$OR_KEY" | tr -d '[:space:]')
+    fi
+    if [ "$M_FLSH" = 1 ] || [ "$M_PRO" = 1 ]; then
+      hd "  ${GLD}Google Gemini${RST} (flash / pro share this key)"
+      say "    ${DIM}How to get one:${RST}"
+      say "      1. Open ${CYN}https://aistudio.google.com/apikey${RST}"
+      say "      2. Sign in with Google"
+      say "      3. Click 'Create API Key' in a new or existing Google Cloud project"
+      say "      4. Copy the key"
+      say "    ${DIM}Free tier: generous flash/pro quotas.${RST}"
+      read -rsp "    paste Gemini key (input hidden, ENTER to skip): " GEMINI_KEY; echo
+      GEMINI_KEY=$(printf '%s' "$GEMINI_KEY" | tr -d '[:space:]')
+    fi
+
+    umask_prev=$(umask); umask 077
+    {
+      [ "$M_FLSH" = 1 ] || [ "$M_PRO" = 1 ] && printf 'export GEMINI_API_KEY=%s\n'    "${GEMINI_KEY:-your-gemini-key}"
+      [ "$M_NEMO" = 1 ] || [ "$M_GROK" = 1 ] || [ "$M_ORFR" = 1 ] && printf 'export OPENROUTER_API_KEY=%s\n' "${OR_KEY:-your-openrouter-key}"
+      if [ "$M_GROQ" = 1 ]; then
+        printf 'export CUSTOM_API_URL=https://api.groq.com/openai/v1\n'
+        printf 'export CUSTOM_API_KEY=%s\n' "${GROQ_KEY:-your-groq-key}"
+      fi
+    } > "$ENV_REAL"
+    chmod 600 "$ENV_REAL"
+    umask "$umask_prev"
+    ok "wrote $ENV_REAL (0600)"
+
+    hd "7b. Key entry summary"
+    if [ "$M_GROQ" = 1 ]; then
+      [ -n "$GROQ_KEY"   ] && ok "  Groq       entered" || warn "  Groq       placeholder (edit $ENV_REAL to add it)"
+    fi
+    if [ "$M_NEMO" = 1 ] || [ "$M_GROK" = 1 ] || [ "$M_ORFR" = 1 ]; then
+      [ -n "$OR_KEY"     ] && ok "  OpenRouter entered" || warn "  OpenRouter placeholder (edit $ENV_REAL to add it)"
+    fi
+    if [ "$M_FLSH" = 1 ] || [ "$M_PRO" = 1 ]; then
+      [ -n "$GEMINI_KEY" ] && ok "  Gemini     entered" || warn "  Gemini     placeholder (edit $ENV_REAL to add it)"
+    fi
+  else
+    say "  skipped interactive key entry; only the example was written."
+    warn "  edit $ENV_EXAMPLE and rename to .env.sauron before starting your orchestrator."
+  fi
 fi
 
 # ---------- 8. next steps ----------
@@ -396,21 +469,21 @@ case "$ORCH" in
     cat <<EOF
   1. Register PAL as an MCP server in ~/.claude.json:
      ${DIM}"mcpServers": { "pal": { "type": "stdio", "command": "/path/to/zen-mcp-server/.pal_venv/bin/python", "args": ["/path/to/zen-mcp-server/server.py"], "env": { ...keys... } } }${RST}
-  2. Source your API keys: ${CYN}source $(dirname "$TARGET")/.env.sauron.example${RST}   (after editing it)
+  2. Source your API keys: ${CYN}source $(dirname "$TARGET")/.env.sauron${RST}   (after editing it)
   3. Restart Claude Code.
   4. On the next session start you should see the auto-invoked skills fire immediately.
 EOF
     ;;
   r)
     cat <<EOF
-  1. Source your API keys: source $(dirname "$TARGET")/.env.sauron.example
+  1. Source your API keys: source $(dirname "$TARGET")/.env.sauron
   2. Open your project in Cursor; .cursor/rules/*.mdc apply automatically.
   3. Ask the model to read sauron-skills/<name>/SKILL.md when trigger phrases appear.
 EOF
     ;;
   l)
     cat <<EOF
-  1. Source your API keys: source $(dirname "$TARGET")/.env.sauron.example
+  1. Source your API keys: source $(dirname "$TARGET")/.env.sauron
   2. Cline reads .clinerules automatically.
   3. Ask Cline to read sauron-skills/<name>/SKILL.md when triggers appear.
 EOF
