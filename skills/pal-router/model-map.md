@@ -10,7 +10,7 @@
 
 **or-free** (openrouter/free meta-router, 200K context). Generalist fallback and quick summarization when nothing more specialised is available.
 
-**pro** (gemini-3-pro-preview, 1M context, alias `pro`). Deep reasoning and adversarial debate through `mcp__pal__challenge`. Excels at multi-turn argumentation.
+**pro** (gemini-3.1-pro-preview, 1M context, alias `pro`). Deep reasoning and adversarial debate through `mcp__pal__challenge`. Excels at multi-turn argumentation.
 
 ## Failover order for the common tasks
 
