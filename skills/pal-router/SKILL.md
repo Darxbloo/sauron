@@ -92,3 +92,19 @@ Auto-invoke pal-router BEFORE reading when you see:
 
 ## The rule
 > Delegate the prose, never the evidence.
+
+## Deterministic pre-filters (`bin/`) — run BEFORE context or PAL
+
+These are 0-token, deterministic wrappers. They cannot refuse or hallucinate, so
+they run first and shrink payloads before anything reaches Claude or a PAL model.
+
+- **`bin/sauron-normalize`** — convert recon JSON-L (httpx/subfinder/dnsx/naabu/nuclei)
+  to ultra-dense TSV, stripping repeated JSON keys. ~25-35% smaller recon payloads.
+  `cat httpx.jsonl | bin/sauron-normalize` (auto-detects tool per line; passes
+  non-JSON through untouched; keeps host/url/status/tech/CVE/severity/matched-at).
+- **`bin/strip-noise`** — strip ANSI/cursor escapes, collapse `\r` progress bars to
+  their final state, and elide the middle of long stack traces (keep top 2 + bottom 2
+  frames + the exception line). `noisy-cmd 2>&1 | bin/strip-noise`.
+
+Rule: for recon output the order is **local pre-filter → (jq/deterministic parse) →
+PAL only if LLM reasoning is still needed**. Never send raw JSON-L straight to a model.
