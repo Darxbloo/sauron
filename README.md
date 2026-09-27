@@ -31,14 +31,53 @@ I built Sauron as a collection of skills that let my AI orchestrator become the 
 - side-effecting actions
 - tool-sequence orchestration
 
-## The routing map
+## Model routing workflow
 
-- **groq** (openai/gpt-oss-120b, ~500 req/min, 8,000 tokens/min cap): report writing, vuln explanations, skeptical validation.
-- **nemotron** (NVIDIA Nemotron, 1M context): bulk reading. Do NOT use for strict structured extraction (hallucinates).
-- **grok** (x-ai on OpenRouter, 2M context): permissive high-context security reasoning; fallback when Gemini refuses.
-- **flash** (Gemini 3.6-flash, 1M context): fast structured extraction; refuses recon for named targets.
-- **or-free** (OpenRouter free meta-router, 200K context): generalist fallback.
-- **pro** (Gemini 3 Pro preview): deep reasoning and adversarial debate.
+Each task class routes to a delegate. Judgment calls (severity, exploitation choice, safety boundaries) stay in the orchestrator.
+
+```mermaid
+flowchart TD
+    U[user prompt<br/>+ recon output / files] --> R{classify task}
+    R -->|report writing /<br/>vuln explanation /<br/>skeptical validation| GRQ[groq<br/>gpt-oss-120b<br/>~500 rpm · 8k tpm]
+    R -->|bulk read of<br/>logs / large scans| NEM[nemotron<br/>NVIDIA · 1M ctx<br/>NOT for JSON schema]
+    R -->|permissive security<br/>reasoning /<br/>Gemini refused| GRK[grok<br/>x-ai · 2M ctx]
+    R -->|structured extract<br/>API / config /<br/>OpenAPI| FLS[flash<br/>Gemini 3.6-flash · 1M ctx<br/>refuses named recon]
+    R -->|generic fallback| ORF[or-free<br/>OpenRouter meta-router]
+    R -->|adversarial debate /<br/>deep chain analysis| PRO[pro<br/>Gemini 3 Pro preview]
+    GRQ & NEM & GRK & FLS & ORF & PRO --> V{envelope /<br/>refusal check}
+    V -->|clean| OUT[to orchestrator<br/>severity + safety<br/>side-effects stay here]
+    V -->|classifier refused /<br/>rate limited| RT[re-route to next]
+    RT --> R
+```
+
+<details><summary>ASCII fallback</summary>
+
+```text
+                    user prompt + recon output
+                                │
+                                ▼
+              ┌─────────────────────────────────────┐
+              │  classify task                      │
+              └─┬────┬────┬────┬────┬────┬──────────┘
+                │    │    │    │    │    │
+     report/    │ bulk│ permis│ struct│ generic│ adversarial
+     vuln       │ read│ security │ extract│ fallback│ debate
+     explain/   │ of  │ reasoning│ (API/  │        │ deep chain
+     validate   │ logs│ (grok)   │ config)│        │
+                ▼    ▼    ▼    ▼    ▼    ▼
+              groq  nemo   grok  flash  or-free   pro
+              gpt-  NVIDIA x-ai  Gemini  OR meta  Gemini 3
+              oss-  1M     2M    3.6-    router   Pro pre
+              120b  ctx    ctx   flash   200K     (challenge)
+                │    │    │    │    │    │
+                └────┴────┴─┬──┴────┴────┘
+                            ▼
+                envelope / refusal check
+                  ├── clean ──▶ orchestrator (severity/safety)
+                  └── refused / rate-limited ──▶ re-route
+```
+
+</details>
 
 Full matrix: [skills/pal-router/model-map.md](skills/pal-router/model-map.md).
 
@@ -71,13 +110,16 @@ If any model refuses, times out, or errors, immediately re-route to another mode
 ## Install
 
 ```bash
-# One-liner (Node available)
-npx sauron
+# One-liner (Node available) — pulls the repo, then runs the installer:
+npx --yes github:crowx01/sauron
 
 # or clone + run bash
 git clone https://github.com/crowx01/sauron && cd sauron
 ./setup.sh
 ```
+
+> Not published to npm yet, so use the `github:` shorthand above (or `npm i -g .`
+> from a clone if you want a persistent `sauron` binary on `PATH`).
 
 `setup.sh` (and its `npx` wrapper) walks you through orchestrator, scope, which
 skills auto-load at session start, and which PAL models you have keys for, then
@@ -160,9 +202,9 @@ Sauron installation
 **Add a single skill after install.**
 
 ```bash
-npx sauron add sqli            # or: ./setup.sh add sqli
-npx sauron list                # shipped + pentesting-skills catalog
-npx sauron sync                # refresh pentesting-skills + re-link everything
+npx --yes github:crowx01/sauron add sqli    # or: ./setup.sh add sqli
+npx --yes github:crowx01/sauron list        # shipped + pentesting-skills catalog
+npx --yes github:crowx01/sauron sync        # refresh pentesting-skills + re-link
 ```
 
 `add` first looks in `skills/` (shipped), then falls back to the
@@ -184,12 +226,12 @@ unless upstream also modified the same file.
 flowchart TD
     A[sauron skills/<br/>shipped core] --> C
     B[crowx01/Pentesting-Skills<br/>upstream repo] -->|git clone/pull| B2[~/.cache/sauron/<br/>pentesting-skills]
-    B2 --> C[Installation +<br/>Synchronization<br/>setup.sh / npx sauron]
+    B2 --> C[Installation +<br/>Synchronization<br/>setup.sh / npx --yes<br/>github:crowx01/sauron]
     C --> D1[Claude Code<br/>~/.claude/skills/<br/>symlinks]
     C --> D2[Cursor<br/>./skills-cursor/<br/>./rules/*.mdc]
     C --> D3[Cline / Codex /<br/>Aider / Generic<br/>./sauron-skills/]
-    E[npx sauron<br/>add SKILL] -.->|later| C
-    F[npx sauron sync] -.->|refresh cache| B2
+    E[npx github:crowx01/sauron<br/>add SKILL] -.->|later| C
+    F[npx github:crowx01/sauron sync] -.->|refresh cache| B2
 ```
 
 <details><summary>ASCII fallback (renders where Mermaid is stripped)</summary>
@@ -209,7 +251,7 @@ flowchart TD
               ▼                             ▼
      ┌──────────────────────────────────────────────────┐
      │  Installation + Synchronization                  │
-     │  setup.sh  /  npx sauron  /  npx sauron sync     │
+     │  setup.sh / npx --yes github:crowx01/sauron / … │
      └───────┬──────────────┬──────────────┬────────────┘
              │              │              │
              ▼              ▼              ▼

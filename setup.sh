@@ -601,15 +601,15 @@ case "$ORCH" in
   1. Source your API keys:  source $(dirname "$TARGET")/.env.sauron
   2. Restart Claude Code.
   3. Session-start skills auto-load on the next session.
-  4. Add more pentesting skills any time:  npx sauron add <skill>
+  4. Add more pentesting skills any time:  npx --yes github:crowx01/sauron add <skill>
                                           (or  ./setup.sh add <skill>)
-  5. Refresh pentesting-skills:  npx sauron sync
+  5. Refresh pentesting-skills:  npx --yes github:crowx01/sauron sync
 EOF
   ;;
   *) cat <<EOF
   1. Source your API keys:  source $(dirname "$TARGET")/.env.sauron
   2. Open your project in your orchestrator.
-  3. Add more skills any time:  npx sauron add <skill>
+  3. Add more skills any time:  npx --yes github:crowx01/sauron add <skill>
 EOF
   ;;
 esac

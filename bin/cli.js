@@ -14,13 +14,15 @@ const BOLD='\x1b[1m', DIM='\x1b[2m', RED='\x1b[31m', RST='\x1b[0m';
 function usage() {
   console.log(`${BOLD}sauron${RST}  interactive AI orchestrator installer for offensive security
 
-${BOLD}Usage${RST}
-  npx sauron                    install (interactive; resumes on Ctrl+C)
-  npx sauron add <skill>        install one shipped or pentesting-skills skill
-  npx sauron list               list shipped + pentesting-skills
-  npx sauron sync               re-sync pentesting-skills + shipped skills
-  npx sauron reset              clear installation checkpoint
-  npx sauron --help             this help
+${BOLD}Usage${RST} (github: form works without npm publish)
+  npx --yes github:crowx01/sauron                install (interactive; resumes on Ctrl+C)
+  npx --yes github:crowx01/sauron add <skill>    install one shipped or pentesting skill
+  npx --yes github:crowx01/sauron list           list shipped + pentesting-skills
+  npx --yes github:crowx01/sauron sync           re-sync pentesting-skills + shipped
+  npx --yes github:crowx01/sauron reset          clear checkpoint
+  npx --yes github:crowx01/sauron --help         this help
+
+${DIM}From a local clone: ./setup.sh <same-verbs>   or   node bin/cli.js <verbs>${RST}
 
 Environment:
   SAURON_PENTESTING_SKILLS_REPO   default https://github.com/crowx01/Pentesting-Skills
@@ -54,7 +56,7 @@ switch (cmd) {
     break;
   case 'add':
     if (!rest[0]) {
-      console.error(`${RED}✗${RST} usage: npx sauron add <skill>`);
+      console.error(`${RED}✗${RST} usage: npx --yes github:crowx01/sauron add <skill>`);
       runSetup(['list']);
       process.exit(2);
     }
