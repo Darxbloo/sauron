@@ -72,7 +72,7 @@ Both adapted from [amElnagdy/review-skills](https://github.com/amElnagdy/review-
 |---|---|---|
 | session start | enabled skills auto-invoke + MEMORY read | SessionStart hook |
 | every prompt | delegate-first + failover re-asserted | UserPromptSubmit hook |
-| any bulk read/write | routed to a Hermes model per task type | pal-router skill |
+| any bulk read/write | routed to a Hermes model per task type | hermes-router skill |
 | any confirmed finding | 4-step pipeline before the report surfaces | validator skill |
 | any PR to review | two-model debate + one review posted | debate-review skill |
 | any PR to babysit | verify, fix, reply, resolve, re-run | babysit-pr skill |

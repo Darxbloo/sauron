@@ -477,15 +477,15 @@ if [ "$ORCH" = "c" ]; then
     else
       ok "  Hermes repo already present at $HERMES_DIR"
     fi
-    if [ ! -x "$HERMES_DIR/.pal_venv/bin/python" ]; then
+    if [ ! -x "$HERMES_DIR/.hermes_venv/bin/python" ]; then
       say "  creating venv"
-      python3 -m venv "$HERMES_DIR/.pal_venv" || { err "venv creation failed"; exit 1; }
+      python3 -m venv "$HERMES_DIR/.hermes_venv" || { err "venv creation failed"; exit 1; }
     fi
     say "  installing dependencies"
-    "$HERMES_DIR/.pal_venv/bin/python" -m pip install -q -r "$HERMES_DIR/requirements.txt" || { err "dependency install failed"; exit 1; }
+    "$HERMES_DIR/.hermes_venv/bin/python" -m pip install -q -r "$HERMES_DIR/requirements.txt" || { err "dependency install failed"; exit 1; }
     [ -f "$HOME/.claude.json" ] || echo '{}' > "$HOME/.claude.json"
     _tmp="$(mktemp)"
-    jq --arg cmd "$HERMES_DIR/.pal_venv/bin/python" --arg srv "$HERMES_DIR/server.py" \
+    jq --arg cmd "$HERMES_DIR/.hermes_venv/bin/python" --arg srv "$HERMES_DIR/server.py" \
       '.mcpServers = (.mcpServers // {}) | .mcpServers.hermes = {type:"stdio", command:$cmd, args:[$srv], env:{DEFAULT_MODEL:"auto"}}' \
       "$HOME/.claude.json" > "$_tmp" && mv "$_tmp" "$HOME/.claude.json" || { err "Hermes registration failed"; exit 1; }
     ok "Hermes cloned, built, and registered (DEFAULT_MODEL=auto -> intelligent cross-provider router)"
@@ -636,7 +636,7 @@ case "$ORCH" in
   c)
     cat <<EOF
   1. Register Hermes as an MCP server in ~/.claude.json:
-     ${DIM}"mcpServers": { "hermes": { "type": "stdio", "command": "/path/to/hermes-mcp-server/.pal_venv/bin/python", "args": ["/path/to/hermes-mcp-server/server.py"], "env": { ...keys... } } }${RST}
+     ${DIM}"mcpServers": { "hermes": { "type": "stdio", "command": "/path/to/hermes-mcp-server/.hermes_venv/bin/python", "args": ["/path/to/hermes-mcp-server/server.py"], "env": { ...keys... } } }${RST}
   2. Source your API keys: ${CYN}source $(dirname "$TARGET")/.env.sauron${RST}   (after editing it)
   3. Restart Claude Code.
   4. On the next session start you should see the auto-invoked skills fire immediately.

@@ -18,7 +18,7 @@ I built Sauron as a collection of skills that let my AI orchestrator become the 
 | Skill | Job | Source |
 |-------|-----|--------|
 | [`validator`](skills/validator/SKILL.md) | Skeptical QA reviewer that runs the 4-step validation pipeline before any finding is reported. | mine |
-| [`pal-router`](skills/pal-router/SKILL.md) | Delegate-first + failover doctrine for dispatching sub-tasks to cheaper or free Hermes models. | mine |
+| [`hermes-router`](skills/hermes-router/SKILL.md) | Delegate-first + failover doctrine for dispatching sub-tasks to cheaper or free Hermes models. | mine |
 | [`debate-review`](skills/debate-review/SKILL.md) | Two-model debate review of a GitHub PR, GitLab MR, or Azure DevOps PR. Posts inline P0/P1/P2 comments from your own gh/glab/az. | adapted from [amElnagdy/review-skills](https://github.com/amElnagdy/review-skills) (MIT) |
 | [`babysit-pr`](skills/babysit-pr/SKILL.md) | Works PR review rounds automatically: verifies findings, fixes blockers, replies in-thread, resolves, re-runs. | adapted from [amElnagdy/review-skills](https://github.com/amElnagdy/review-skills) (MIT) |
 
@@ -40,7 +40,7 @@ I built Sauron as a collection of skills that let my AI orchestrator become the 
 - **or-free** (OpenRouter free meta-router, 200K context): generalist fallback.
 - **pro** (Gemini 3 Pro preview): deep reasoning and adversarial debate.
 
-Full matrix: [skills/pal-router/model-map.md](skills/pal-router/model-map.md).
+Full matrix: [skills/hermes-router/model-map.md](skills/hermes-router/model-map.md).
 
 ## The 4-step validation pipeline
 

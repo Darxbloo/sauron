@@ -50,7 +50,7 @@ Combine validator output + gap-closing evidence + debate transcript. Delegate th
 
 ## Related
 - Uses `debate-review` methodology adapted from https://github.com/amElnagdy/review-skills.
-- Feeds `pal-router` for model dispatch.
+- Feeds `hermes-router` for model dispatch.
 
 ## The rule
 > Delegate the prose, never the evidence.
