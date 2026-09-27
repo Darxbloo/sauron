@@ -27,7 +27,7 @@ If the task is a user-facing decision, an exploitation choice, a severity call, 
 - **grok** (`x-ai/grok-4.1-fast` when available, else `x-ai/grok-4.3` on OpenRouter, 2M context). Permissive high-context security reasoning. Reliable fallback when Gemini refuses.
 - **flash** (`gemini-3.6-flash`, 1M context, alias `flash`). Fast structured extraction from prose. Failure mode: refuses recon-log or attack-surface analysis for named targets.
 - **or-free** (`openrouter/free` meta-router, 200K context). Generalist fallback.
-- **pro** (`gemini-3-pro-preview`, 1M context, alias `pro`). Deep reasoning and adversarial debate via `mcp__pal__challenge`.
+- **pro** (`gemini-3-pro-preview`, 1M context, alias `pro`). Deep reasoning and adversarial debate via `mcp__hermes__challenge`.
 
 Full model matrix and aliases: [model-map.md](model-map.md).
 

@@ -16,7 +16,7 @@ Byte-exact evidence goes into the finding directory alongside the raw request/re
 
 ## Step C. Adversarial debate
 
-Route the finding to `mcp__pal__challenge` (or `mcp__pal__consensus`) with `pro` (Gemini 3 Pro) as the primary debater and `groq` as the fallback. Frame the debate adversarially: challenge the severity rating, the exploitability under realistic attacker preconditions, chain viability toward higher impact, and the impact ceiling on this specific target.
+Route the finding to `mcp__hermes__challenge` (or `mcp__hermes__consensus`) with `pro` (Gemini 3 Pro) as the primary debater and `groq` as the fallback. Frame the debate adversarially: challenge the severity rating, the exploitability under realistic attacker preconditions, chain viability toward higher impact, and the impact ceiling on this specific target.
 
 The goal is not to win the debate but to surface hidden assumptions before a triager does.
 

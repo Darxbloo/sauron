@@ -4,12 +4,12 @@ From cold box to shipping a finding, without burning Claude's context on busy wo
 
 ## 1. One-time install (5 min)
 
-1. Clone the PAL MCP server (a fork of zen-mcp-server): https://github.com/BeehiveInnovations/zen-mcp-server. Register it in `~/.claude.json` under `mcpServers.pal`.
+1. Clone the Hermes MCP server (a fork of zen-mcp-server): https://github.com/BeehiveInnovations/zen-mcp-server. Register it in `~/.claude.json` under `mcpServers.pal`.
 2. Clone this repo.
 3. Run `./setup.sh` from the sauron root. The wizard walks you through:
    - **Scope.** Global (`~/.claude/settings.json`, loads every session, every project) or per-project (`./.claude/settings.json`, only loads when Claude Code runs inside that project). Per-project is the default choice unless you want the framework everywhere.
    - **Auto-load skills.** Pick which skills fire as the first tool calls of every session (caveman, pentesting-agent, validator).
-   - **Delegate-first policy.** Pick which PAL models you have keys for (groq, nemotron, grok, flash, or-free, pro). Unselected models are dropped from the rendered hook so Claude never tries to route to them.
+   - **Delegate-first policy.** Pick which Hermes models you have keys for (groq, nemotron, grok, flash, or-free, pro). Unselected models are dropped from the rendered hook so Claude never tries to route to them.
 4. Fill in your API keys in the generated `.env.sauron.example` and source it from your shell rc.
 5. Symlink each chosen skill into the skills folder Claude Code discovers from. `setup.sh` will offer to do this for you; the manual equivalent:
    ```bash
@@ -55,7 +55,7 @@ Every confirmed finding runs through the same loop before you see the report.
 
 **B. Gap tests.** You (or Claude via your tools) run every missing test, negative control, and live observation the validator flagged. Non-negotiable rules: no third-party PII, no destructive payloads, no account creation under your identity. If a gap cannot be closed without crossing a safety boundary, mark it explicitly in the final report rather than skipping.
 
-**C. Adversarial debate.** `mcp__pal__challenge` runs with `pro` (Gemini 3 Pro) as primary and `groq` as fallback. Framing is adversarial: attack the severity rating, exploitability under realistic attacker preconditions, chain viability, and impact ceiling.
+**C. Adversarial debate.** `mcp__hermes__challenge` runs with `pro` (Gemini 3 Pro) as primary and `groq` as fallback. Framing is adversarial: attack the severity rating, exploitability under realistic attacker preconditions, chain viability, and impact ceiling.
 
 **D. Synthesize and write.** Validator output + gap-closing evidence + debate transcript are combined into a final finding. `groq` drafts the prose. You byte-check every technical string (hostnames, URLs, tokens, CVSS vectors, CWE, file paths) against the raw evidence. Only then does the report leave the desk, submitted by you under your identity.
 
@@ -72,7 +72,7 @@ Both adapted from [amElnagdy/review-skills](https://github.com/amElnagdy/review-
 |---|---|---|
 | session start | enabled skills auto-invoke + MEMORY read | SessionStart hook |
 | every prompt | delegate-first + failover re-asserted | UserPromptSubmit hook |
-| any bulk read/write | routed to a PAL model per task type | pal-router skill |
+| any bulk read/write | routed to a Hermes model per task type | pal-router skill |
 | any confirmed finding | 4-step pipeline before the report surfaces | validator skill |
 | any PR to review | two-model debate + one review posted | debate-review skill |
 | any PR to babysit | verify, fix, reply, resolve, re-run | babysit-pr skill |
@@ -100,7 +100,7 @@ Both adapted from [amElnagdy/review-skills](https://github.com/amElnagdy/review-
 │    │ [4] proceed?  back up existing then MERGE (append,  │                 │
 │    │               never clobber other frameworks)       │                 │
 │    │ [5] symlink?  ln -sfn skills/* into .claude/skills/ │                 │
-│    │ [6] PAL check on ~/.claude.json                     │                 │
+│    │ [6] Hermes check on ~/.claude.json                     │                 │
 │    │ [7] env template next to settings.json              │                 │
 │    └─────────────────────────────────────────────────────┘                 │
 │                                                                            │
@@ -146,10 +146,10 @@ Both adapted from [amElnagdy/review-skills](https://github.com/amElnagdy/review-
 │           v                                                                │
 │    parse route?                                                            │
 │      +---- deterministic  ->  jq / grep locally (0 tokens)                 │
-│      +---- LLM reasoning  ->  PAL(grok, 2M ctx)                            │
-│      +---- huge JS bundle ->  PAL(nemotron, 1M ctx)                        │
-│      +---- structured     ->  PAL(flash) -> fallback or-free               │
-│      +---- report writeup ->  PAL(groq) -> Claude byte-checks              │
+│      +---- LLM reasoning  ->  Hermes(grok, 2M ctx)                            │
+│      +---- huge JS bundle ->  Hermes(nemotron, 1M ctx)                        │
+│      +---- structured     ->  Hermes(flash) -> fallback or-free               │
+│      +---- report writeup ->  Hermes(groq) -> Claude byte-checks              │
 │      +---- model refused? ->  auto re-route (never a stop)                 │
 └────────────────────────────────────────────────────────────────────────────┘
                                     |
@@ -162,11 +162,11 @@ Both adapted from [amElnagdy/review-skills](https://github.com/amElnagdy/review-
 │    B. Gap tests with your tools                                            │
 │       (no 3rd-party PII, no destructive, no account creation)              │
 │           |                                                                │
-│    C. mcp__pal__challenge(finding, model=pro; fallback=groq)               │
+│    C. mcp__hermes__challenge(finding, model=pro; fallback=groq)               │
 │       adversarial: severity, exploitability, chain, impact ceiling         │
 │           |                                                                │
 │    D. Synthesize (validator + gap evidence + debate)                       │
-│       PAL(groq) drafts prose                                               │
+│       Hermes(groq) drafts prose                                               │
 │       Claude byte-checks every hostname/URL/token/CVSS vs raw evidence     │
 │           |                                                                │
 │           v                                                                │

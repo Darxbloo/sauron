@@ -37,7 +37,7 @@ Invoke the validator's own review over the finding. Produce twelve fields:
 Run every missing test, negative control, and live observation the validator flagged. Use my own tools. No shortcuts, no third-party PII, no destructive payloads, no account creation under my identity.
 
 ### Step C. Adversarial debate
-Route to `mcp__pal__challenge` with `pro` (Gemini 3 Pro) as primary and `groq` as fallback. Frame the debate adversarially: challenge severity, exploitability, chain viability, impact ceiling.
+Route to `mcp__hermes__challenge` with `pro` (Gemini 3 Pro) as primary and `groq` as fallback. Frame the debate adversarially: challenge severity, exploitability, chain viability, impact ceiling.
 
 ### Step D. Synthesize + write
 Combine validator output + gap-closing evidence + debate transcript. Delegate the prose to `groq` per the delegate-first doctrine. Human then verifies every technical string (hostnames, URLs, tokens, CVSS vectors, CWE, paths) byte-for-byte against raw evidence.
