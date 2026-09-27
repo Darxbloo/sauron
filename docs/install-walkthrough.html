@@ -49,15 +49,7 @@
     padding-top: 30mm;
     text-align: center;
   }
-  .eye {
-    font-family: "DejaVu Sans Mono", monospace;
-    color: #ff5a1a;
-    font-size: 11px;
-    line-height: 1.15;
-    white-space: pre;
-    margin: 0 auto 14px;
-    text-shadow: 0 0 6px rgba(255,90,26,.5);
-  }
+  .emblem { display: block; margin: 0 auto 12px; }
   .kicker {
     display: inline-block; margin: 8px 0 0;
     background: #7a1500; color: #ffd7a8;
@@ -119,15 +111,24 @@
 
 <!-- ============ COVER ============ -->
 <div class="cover">
-  <div class="eye">          .-~~~-.
-        .(   o    ).
-         ~-...-~</div>
-  <pre class="banner">███████╗ █████╗ ██╗   ██╗██████╗  ██████╗ ███╗   ██╗
-██╔════╝██╔══██╗██║   ██║██╔══██╗██╔═══██╗████╗  ██║
-███████╗███████║██║   ██║██████╔╝██║   ██║██╔██╗ ██║
-╚════██║██╔══██║██║   ██║██╔══██╗██║   ██║██║╚██╗██║
-███████║██║  ██║╚██████╔╝██║  ██║╚██████╔╝██║ ╚████║
-╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝</pre>
+  <svg class="emblem" width="150" height="96" viewBox="0 0 150 96" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="fire" cx="50%" cy="50%" r="62%">
+        <stop offset="0%" stop-color="#fff2c0"/>
+        <stop offset="32%" stop-color="#ffb347"/>
+        <stop offset="66%" stop-color="#ff5a1a"/>
+        <stop offset="100%" stop-color="#7a1500"/>
+      </radialGradient>
+    </defs>
+    <g stroke="#ff7a2a" stroke-width="2" stroke-linecap="round" opacity="0.75">
+      <line x1="75" y1="48" x2="75" y2="6"/><line x1="75" y1="48" x2="75" y2="90"/>
+      <line x1="75" y1="48" x2="30" y2="20"/><line x1="75" y1="48" x2="120" y2="20"/>
+      <line x1="75" y1="48" x2="30" y2="76"/><line x1="75" y1="48" x2="120" y2="76"/>
+    </g>
+    <path d="M8,48 Q75,4 142,48 Q75,92 8,48 Z" fill="url(#fire)" stroke="#ffb347" stroke-width="1.5"/>
+    <ellipse cx="75" cy="48" rx="8" ry="34" fill="#160600"/>
+    <ellipse cx="75" cy="48" rx="3" ry="29" fill="#ff3b00"/>
+  </svg>
   <h1>SAURON</h1>
   <div class="subtitle">SETUP WALKTHROUGH</div>
   <div class="kicker">NOW CUTS HOOK OVERHEAD 85%</div>
@@ -168,11 +169,20 @@
 <!-- ============ PAGE: terminal session ============ -->
 <div class="pagebreak"></div>
 <h2>2. The terminal session (Claude Code path)</h2>
-<pre class="banner">      .-~~~-.
-    .(   o    ).
-     ~-...-~
-
-interactive setup  ·  one agent to route them all</pre>
+<div style="text-align:center;margin:6px 0 12px;">
+  <svg width="64" height="42" viewBox="0 0 150 96" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="fire2" cx="50%" cy="50%" r="62%">
+        <stop offset="0%" stop-color="#fff2c0"/><stop offset="32%" stop-color="#ffb347"/>
+        <stop offset="66%" stop-color="#ff5a1a"/><stop offset="100%" stop-color="#7a1500"/>
+      </radialGradient>
+    </defs>
+    <path d="M8,48 Q75,4 142,48 Q75,92 8,48 Z" fill="url(#fire2)" stroke="#ffb347" stroke-width="1.5"/>
+    <ellipse cx="75" cy="48" rx="8" ry="34" fill="#160600"/>
+    <ellipse cx="75" cy="48" rx="3" ry="29" fill="#ff3b00"/>
+  </svg>
+  <div style="color:#b0683c;font-style:italic;font-size:9.5px;margin-top:2px;">interactive setup · one agent to route them all</div>
+</div>
 
 <pre class="term"><span class="prompt">0. Which agent orchestrator do you use?</span>
   c) claude-code     (default)  full: hooks + Skill() invocations + delegate policy
