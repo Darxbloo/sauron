@@ -11,14 +11,14 @@
 
 ## What it is
 
-I built Sauron as a collection of skills that let my AI orchestrator become the puppet-master of a multi-model chain for bug-bounty and offensive-security work. The installer drops the appropriate rules into Claude Code, Cursor, Cline, Codex CLI, Aider, or, for any other orchestrator, writes a portable `SYSTEM_PROMPT.md`. The setup wizard walks you through picking the orchestrator, the install scope, the skills, and the Hermes models, so the master model calls the helpers while you keep the judgment calls.
+I built Sauron as a collection of skills that let my AI orchestrator become the puppet-master of a multi-model chain for bug-bounty and offensive-security work. The installer drops the appropriate rules into Claude Code, Cursor, Cline, Codex CLI, Aider, or, for any other orchestrator, writes a portable `SYSTEM_PROMPT.md`. The setup wizard walks you through picking the orchestrator, the install scope, the skills, and the PAL models, so the master model calls the helpers while you keep the judgment calls.
 
 ## The Nazgul (skills)
 
 | Skill | Job | Source |
 |-------|-----|--------|
 | [`validator`](skills/validator/SKILL.md) | Skeptical QA reviewer that runs the 4-step validation pipeline before any finding is reported. | mine |
-| [`hermes-router`](skills/hermes-router/SKILL.md) | Delegate-first + failover doctrine for dispatching sub-tasks to cheaper or free Hermes models. | mine |
+| [`pal-router`](skills/pal-router/SKILL.md) | Delegate-first + failover doctrine for dispatching sub-tasks to cheaper or free PAL models. | mine |
 | [`debate-review`](skills/debate-review/SKILL.md) | Two-model debate review of a GitHub PR, GitLab MR, or Azure DevOps PR. Posts inline P0/P1/P2 comments from your own gh/glab/az. | adapted from [amElnagdy/review-skills](https://github.com/amElnagdy/review-skills) (MIT) |
 | [`babysit-pr`](skills/babysit-pr/SKILL.md) | Works PR review rounds automatically: verifies findings, fixes blockers, replies in-thread, resolves, re-runs. | adapted from [amElnagdy/review-skills](https://github.com/amElnagdy/review-skills) (MIT) |
 
@@ -40,13 +40,13 @@ I built Sauron as a collection of skills that let my AI orchestrator become the 
 - **or-free** (OpenRouter free meta-router, 200K context): generalist fallback.
 - **pro** (Gemini 3 Pro preview): deep reasoning and adversarial debate.
 
-Full matrix: [skills/hermes-router/model-map.md](skills/hermes-router/model-map.md).
+Full matrix: [skills/pal-router/model-map.md](skills/pal-router/model-map.md).
 
 ## The 4-step validation pipeline
 
 1. Validator stress-test (twelve fields).
 2. Gap tests (run the missing checks with your own tools).
-3. Adversarial debate via `mcp__hermes__challenge` (pro primary, groq fallback).
+3. Adversarial debate via `mcp__pal__challenge` (pro primary, groq fallback).
 4. Synthesize + write (delegate prose to groq; human sanity-checks byte-exact against evidence).
 
 Full spec: [skills/validator/SKILL.md](skills/validator/SKILL.md).
@@ -71,11 +71,11 @@ If any model refuses, times out, or errors, immediately re-route to another mode
 ## Install
 
 ```bash
-# 1. REQUIRED: Hermes — the intelligent multi-provider MCP model router (fork of zen-mcp-server).
+# 1. REQUIRED: PAL — the intelligent multi-provider MCP model router (fork of zen-mcp-server).
 #    setup.sh will auto-clone, build, and register it if missing; or do it yourself first:
-git clone https://github.com/crowx01/hermes-mcp-server ~/tools/hermes-mcp-server
+git clone https://github.com/crowx01/pal-mcp-server ~/tools/pal-mcp-server
 
-# 2. Get sauron and run the interactive setup (installs + registers Hermes as a mandatory step)
+# 2. Get sauron and run the interactive setup (installs + registers PAL as a mandatory step)
 git clone https://github.com/crowx01/sauron && cd sauron
 ./setup.sh
 ```
@@ -83,7 +83,7 @@ git clone https://github.com/crowx01/sauron && cd sauron
 `setup.sh` walks you through:
 - **Scope.** Global (`~/.claude/settings.json`, loads every session everywhere) or per-project (`./.claude/settings.json`, only loads when the chosen orchestrator runs in that project). Per-project is the default so the framework does not attach to unrelated work.
 - **Auto-load skills.** Pick which skills fire at session start (caveman, pentesting-agent, validator).
-- **Delegate-first policy.** Pick which Hermes models you have keys for. Unselected models are dropped from the rendered hook.
+- **Delegate-first policy.** Pick which PAL models you have keys for. Unselected models are dropped from the rendered hook.
 - **Backup.** Any existing `settings.json` gets a timestamped `.bak` before write.
 
 Full walkthrough from cold box to shipping a finding: **[docs/WORKFLOW.md](docs/WORKFLOW.md)**.

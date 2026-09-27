@@ -1,5 +1,5 @@
 ---
-name: hermes-router
+name: pal-router
 description: >-
   Delegate-first + failover doctrine for the framework. Dispatches sub-tasks to cheaper or free PAL
   models so Claude Opus's context stays reserved for judgment. Triggers on: 'route this to a
@@ -7,7 +7,7 @@ description: >-
   X', 'gemini refused, what now'.
 ---
 
-# hermes-router
+# pal-router
 
 **One-line pitch:** Delegate-first + failover doctrine skill for the sauron framework. Dispatches sub-tasks to cheaper or free PAL models so Claude Opus's context stays reserved for judgment.
 
@@ -27,7 +27,7 @@ If the task is a user-facing decision, an exploitation choice, a severity call, 
 - **grok** (`x-ai/grok-4.1-fast` when available, else `x-ai/grok-4.3` on OpenRouter, 2M context). Permissive high-context security reasoning. Reliable fallback when Gemini refuses.
 - **flash** (`gemini-3.6-flash`, 1M context, alias `flash`). Fast structured extraction from prose. Failure mode: refuses recon-log or attack-surface analysis for named targets.
 - **or-free** (`openrouter/free` meta-router, 200K context). Generalist fallback.
-- **pro** (`gemini-3-pro-preview`, 1M context, alias `pro`). Deep reasoning and adversarial debate via `mcp__hermes__challenge`.
+- **pro** (`gemini-3-pro-preview`, 1M context, alias `pro`). Deep reasoning and adversarial debate via `mcp__pal__challenge`.
 
 Full model matrix and aliases: [model-map.md](model-map.md).
 
@@ -78,7 +78,7 @@ The doctrine is enforced by two hooks in `~/.claude/settings.json`, both shipped
 - **Rule 11 (route-plan pre-flight, speculative):** for tasks with 3 or more distinct sub-steps, issue a small groq call (~200 tokens) FIRST asking for a routing plan; then execute. Measure impact; drop if overhead exceeds savings on tasks under 5 sub-steps.
 
 ## Auto-detect delegation triggers
-Auto-invoke hermes-router BEFORE reading when you see:
+Auto-invoke pal-router BEFORE reading when you see:
 - A file open > 5 KB (`Read` with no `limit` on a large file)
 - Any WebFetch call
 - Bash output over 100 lines
