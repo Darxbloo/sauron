@@ -17,7 +17,7 @@ I built Sauron as a collection of skills that let my AI orchestrator become the 
 
 | Skill | Job | Source |
 |-------|-----|--------|
-| [`validator`](skills/validator/SKILL.md) | Defines the 4-step validation pipeline the hook invokes. **Name collision:** the knowledge base ships its own, larger `validator` (351 lines vs 56). Whichever is installed at `~/.claude/skills/validator` wins, and `setup.sh` will not overwrite an existing real directory — so with the knowledge base installed, that one is what the hook actually reaches. | mine; see also [Pentesting-Agent-new](https://github.com/Darxbloo/Pentesting-Agent-new) |
+| [`finding-pipeline`](skills/finding-pipeline/SKILL.md) | Orchestrates the 4-step validation pipeline over a confirmed finding. Not the reviewer: step A calls the `validator` skill from the knowledge base, step C calls PAL, step D calls groq. Renamed from `validator`, which collided with that reviewer. | mine |
 | [`pal-router`](skills/pal-router/SKILL.md) | Delegate-first + failover doctrine for dispatching sub-tasks to cheaper or free PAL models. | mine |
 | [`debate-review`](skills/debate-review/SKILL.md) | Two-model debate review of a GitHub PR, GitLab MR, or Azure DevOps PR. Posts inline P0/P1/P2 comments from your own gh/glab/az. | adapted from [amElnagdy/review-skills](https://github.com/amElnagdy/review-skills) (MIT) |
 | [`babysit-pr`](skills/babysit-pr/SKILL.md) | Works PR review rounds automatically: verifies findings, fixes blockers, replies in-thread, resolves, re-runs. | adapted from [amElnagdy/review-skills](https://github.com/amElnagdy/review-skills) (MIT) |
@@ -91,7 +91,7 @@ Full matrix: [skills/pal-router/model-map.md](skills/pal-router/model-map.md).
 3. Adversarial debate via `mcp__pal__challenge` (pro primary, groq fallback).
 4. Synthesize + write (delegate prose to groq; human sanity-checks byte-exact against evidence).
 
-Full spec: [skills/validator/SKILL.md](skills/validator/SKILL.md).
+Full spec: [skills/finding-pipeline/SKILL.md](skills/finding-pipeline/SKILL.md).
 
 ## Orchestrators
 
@@ -283,7 +283,7 @@ leaving these as static notes:
 | Trigger | Skill | What happens |
 |---|---|---|
 | A model refuses, 402s, 404s, hallucinates, or a fallback saves a route | [`pal-learn`](skills/pal-learn/SKILL.md) | Verifies the behaviour against the live provider, then enriches that model's entry in the map, the failover order, and any doc or hook string that names it |
-| Before a finding is reported | [`validator`](skills/validator/SKILL.md) | Runs the 4-step pipeline: stress-test, close the evidence gaps, adversarial challenge, synthesize |
+| Before a finding is reported | [`finding-pipeline`](skills/finding-pipeline/SKILL.md) | Runs the 4-step pipeline: stress-test (via the knowledge base's `validator`), close the evidence gaps, adversarial challenge, synthesize |
 | End of an engagement | `pentest-debrief` (knowledge base) | Mines the session for techniques and dead ends and files them |
 
 The rule all three share: verify before filing, deduplicate against what is already written, and
