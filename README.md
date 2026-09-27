@@ -22,15 +22,6 @@ I built Sauron as a collection of skills that let my AI orchestrator become the 
 | [`debate-review`](skills/debate-review/SKILL.md) | Two-model debate review of a GitHub PR, GitLab MR, or Azure DevOps PR. Posts inline P0/P1/P2 comments from your own gh/glab/az. | adapted from [amElnagdy/review-skills](https://github.com/amElnagdy/review-skills) (MIT) |
 | [`babysit-pr`](skills/babysit-pr/SKILL.md) | Works PR review rounds automatically: verifies findings, fixes blockers, replies in-thread, resolves, re-runs. | adapted from [amElnagdy/review-skills](https://github.com/amElnagdy/review-skills) (MIT) |
 
-## What stays in your orchestrator (never delegated)
-
-- user-facing decisions
-- exploitation choices
-- severity and CVSS calls
-- safety-boundary checks
-- side-effecting actions
-- tool-sequence orchestration
-
 ## Model routing workflow
 
 Each task class routes to a delegate. Judgment calls (severity, exploitation choice, safety boundaries) stay in the orchestrator.
@@ -102,10 +93,6 @@ The installer supports six targets. Pick one at prompt `0` in `./setup.sh`.
 - **Generic / other**: writes `./SYSTEM_PROMPT.sauron.md` you can paste into any tool's system prompt, with `skills/*` copied alongside.
 
 For non-Claude orchestrators the installer also appends an index of the shipped skills to the rules file so the model knows what SKILL.md files it can read when a trigger phrase appears (since only Claude Code has the `Skill()` primitive).
-
-## Failover doctrine
-
-If any model refuses, times out, or errors, immediately re-route to another model. A classifier refusal is a routing problem, not a stop.
 
 ## Install
 
