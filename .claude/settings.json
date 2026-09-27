@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [],
+    "deny": []
+  },
+  "effortLevel": "medium",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"TOKEN-SAVING DEFAULTS. (1) Invoke the `caveman` skill in `ultra` mode: compressed prose, code/commands/evidence byte-exact. (2) DELEGATE-FIRST via Hermes (mcp__hermes__chat/analyze): route bulk reading, extraction, summarization, and secondary validation to a Hermes model before doing it yourself, so those tokens never enter this window. Routing: `groq` (gpt-oss-120b) for writeups/skeptical validation/quality code-reasoning; `nvidia/nemotron-3.5-lightning:free` (1M ctx) for bulk reading of large files/logs; `openrouter/free` generalist fallback; `flash` (gemini-3.6-flash) fast structured extraction; `pro` (gemini-3-pro-preview) deep-reasoning fallback. On refusal/error, re-route to another model instead of stopping. Include working_directory_absolute_path on every Hermes call. KEEP IN OWN MODEL: user-facing decisions, side-effecting actions, orchestration. (3) effortLevel is medium (Hermes carries heavy reasoning). Re-invoke caveman if the model changes mid-session.\"}}'"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"Active: caveman ultra + Hermes delegate-first (groq=write/validate, nemotron/flash=bulk read, pro=deep reason); failover on refusal/error.\"}}'"
+          }
+        ]
+      }
+    ]
+  }
+}
