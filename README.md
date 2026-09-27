@@ -17,10 +17,13 @@ I built Sauron as a collection of skills that let my AI orchestrator become the 
 
 | Skill | Job | Source |
 |-------|-----|--------|
-| [`validator`](skills/validator/SKILL.md) | Skeptical QA reviewer that runs the 4-step validation pipeline before any finding is reported. | mine |
+| [`validator`](skills/validator/SKILL.md) | Defines the 4-step validation pipeline the hook invokes. **Name collision:** the knowledge base ships its own, larger `validator` (351 lines vs 56). Whichever is installed at `~/.claude/skills/validator` wins, and `setup.sh` will not overwrite an existing real directory — so with the knowledge base installed, that one is what the hook actually reaches. | mine; see also [Pentesting-Agent-new](https://github.com/Darxbloo/Pentesting-Agent-new) |
 | [`pal-router`](skills/pal-router/SKILL.md) | Delegate-first + failover doctrine for dispatching sub-tasks to cheaper or free PAL models. | mine |
 | [`debate-review`](skills/debate-review/SKILL.md) | Two-model debate review of a GitHub PR, GitLab MR, or Azure DevOps PR. Posts inline P0/P1/P2 comments from your own gh/glab/az. | adapted from [amElnagdy/review-skills](https://github.com/amElnagdy/review-skills) (MIT) |
 | [`babysit-pr`](skills/babysit-pr/SKILL.md) | Works PR review rounds automatically: verifies findings, fixes blockers, replies in-thread, resolves, re-runs. | adapted from [amElnagdy/review-skills](https://github.com/amElnagdy/review-skills) (MIT) |
+| [`pal-learn`](skills/pal-learn/SKILL.md) | Files an observed routing fact (refusal, 402, withdrawn model ID, hallucination, working fallback) back into the model map, verified against the live provider first. Keeps the routing knowledge from going stale. | mine, adapting the `pentest-learn` loop from [Pentesting-Agent-new](https://github.com/Darxbloo/Pentesting-Agent-new) |
+| `pentesting-agent`, and 40 vulnerability-category skills | The offensive-security knowledge base the generated hook auto-loads: authorization gate, triage decision tree, per-class methodology/tooling/reporting/case-patterns. Plus `agents/pentester.md`, `pentest-learn` and `pentest-debrief`. | **not shipped here** - install from [Pentesting-Agent-new](https://github.com/Darxbloo/Pentesting-Agent-new) |
+| `caveman` | Ultra-compressed output that keeps code, commands and evidence byte-exact. Auto-loaded at session start in `full` mode. | **not shipped here** - install from [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman) (skills tree MIT; its engine dirs are BSL-1.1) |
 
 ## What stays in your orchestrator (never delegated)
 
@@ -270,6 +273,21 @@ flowchart TD
 > friendlier way to produce the same file.
 
 Then restart your orchestrator.
+
+## Keeping it true
+
+The routing map is a claim about a moving target: models get withdrawn, free tiers change, refusal
+behaviour shifts. Sauron borrows the compounding loop from the pentesting knowledge base rather than
+leaving these as static notes:
+
+| Trigger | Skill | What happens |
+|---|---|---|
+| A model refuses, 402s, 404s, hallucinates, or a fallback saves a route | [`pal-learn`](skills/pal-learn/SKILL.md) | Verifies the behaviour against the live provider, then enriches that model's entry in the map, the failover order, and any doc or hook string that names it |
+| Before a finding is reported | [`validator`](skills/validator/SKILL.md) | Runs the 4-step pipeline: stress-test, close the evidence gaps, adversarial challenge, synthesize |
+| End of an engagement | `pentest-debrief` (knowledge base) | Mines the session for techniques and dead ends and files them |
+
+The rule all three share: verify before filing, deduplicate against what is already written, and
+correct a wrong claim rather than stacking a caveat on it.
 
 ## Real-world lessons
 

@@ -48,5 +48,11 @@ only point at them, and you install them yourself.
   your own first-party traffic but not offering the functionality to third parties as a
   hosted, managed or embedded service. Only the MIT `skills/caveman` directory is needed
   here.
+- **Pentesting-Agent-new** — https://github.com/Darxbloo/Pentesting-Agent-new — the offensive-security knowledge base supplying
+  `pentesting-agent`, `validator`, `pentest-learn`, `pentest-debrief`, `agents/pentester.md` and
+  40 vulnerability-category skills that the generated hook auto-loads. **It currently carries no
+  LICENSE file**, so third parties have no grant to use it; if it is to be a documented
+  prerequisite for sauron, it needs one. Its own `SOURCES.md` records its upstream provenance
+  (crowx01/Pentesting-Skills, h0tak88r/Sec-88, and a review of disclosed HackerOne reports).
 - **pal-mcp-server** (formerly zen-mcp-server) — https://github.com/BeehiveInnovations/zen-mcp-server
   — the MCP server that serves the PAL tools. Apache-2.0.

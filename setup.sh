@@ -560,6 +560,9 @@ if [ "$ORCH" = "c" ]; then
     else
       warn "skill NOT found: $name (looked in: $SKILL_DIRS)"
       [ "$name" = caveman ] && warn "  get it from https://github.com/JuliusBrussee/caveman"
+      case "$name" in pentesting-agent|validator)
+        warn "  get it from https://github.com/Darxbloo/Pentesting-Agent-new" ;;
+      esac
       warn "  every session will open with a failing Skill($name) call until you install it."
     fi
   done
