@@ -71,26 +71,161 @@ If any model refuses, times out, or errors, immediately re-route to another mode
 ## Install
 
 ```bash
-# 1. REQUIRED: PAL — the intelligent multi-provider MCP model router (fork of zen-mcp-server).
-#    setup.sh will auto-clone, build, and register it if missing; or do it yourself first:
-git clone https://github.com/crowx01/pal-mcp-server ~/tools/pal-mcp-server
+# One-liner (Node available)
+npx sauron
 
-# 2. Get sauron and run the interactive setup (installs + registers PAL as a mandatory step)
+# or clone + run bash
 git clone https://github.com/crowx01/sauron && cd sauron
 ./setup.sh
 ```
 
-`setup.sh` walks you through:
-- **Scope.** Global (`~/.claude/settings.json`, loads every session everywhere) or per-project (`./.claude/settings.json`, only loads when the chosen orchestrator runs in that project). Per-project is the default so the framework does not attach to unrelated work.
-- **Auto-load skills.** Pick which skills fire at session start (caveman, pentesting-agent, validator).
-- **Delegate-first policy.** Pick which PAL models you have keys for. Unselected models are dropped from the rendered hook.
-- **Backup.** Any existing `settings.json` gets a timestamped `.bak` before write.
+`setup.sh` (and its `npx` wrapper) walks you through orchestrator, scope, which
+skills auto-load at session start, and which PAL models you have keys for, then
+handles the rest automatically: writes rules/settings, backs up existing files
+with `.bak.<timestamp>`, installs shipped skills into the right agent-specific
+directory, **auto-clones and syncs the [`Pentesting-Skills`](https://github.com/crowx01/Pentesting-Skills)
+repository into your agent's skills dir** (see below), and clones/registers the
+PAL MCP server if missing.
 
-Full walkthrough from cold box to shipping a finding: **[docs/WORKFLOW.md](docs/WORKFLOW.md)**.
+**Ctrl+C safe.** State is checkpointed at `$XDG_STATE_HOME/sauron/install-state`
+(default `~/.local/state/sauron/`). If the installer is interrupted, re-running
+resumes at the first incomplete step:
 
-See a full picture-book walkthrough of the wizard + what your orchestrator sees at boot: **[docs/install-walkthrough.pdf](docs/install-walkthrough.pdf)** (6 pages, fire-palette rendering).
+```text
+Previous installation detected.
 
-> Prefer to skip the wizard? Copy `settings.example.json` to `~/.claude/settings.json` (or `./.claude/settings.json` for per-project) and edit it by hand. `setup.sh` is just a friendlier way to produce the same file.
+✓ Orchestrator selection
+✓ Install scope
+✓ Skill preload picks
+✓ PAL model picks
+✓ Rules/settings file
+→ Skills installed
+○ pentesting-skills synchronised
+○ API keys
+
+Resuming installation…
+```
+
+Reset the checkpoint any time with `./setup.sh reset`.
+
+Full walkthrough: **[docs/WORKFLOW.md](docs/WORKFLOW.md)**  ·  picture-book
+walkthrough: **[docs/install-walkthrough.pdf](docs/install-walkthrough.pdf)** (6 pages).
+
+## Skills
+
+**What Skills are.** A skill is a bundle of instructions the AI orchestrator
+loads into a conversation when a matching trigger phrase appears (Claude Code
+via the `Skill()` primitive; every other orchestrator by referencing the
+skill's `SKILL.md` from a rules file). Each skill lives under
+[`skills/<name>/`](skills/) with a single `SKILL.md` in YAML-frontmatter form.
+
+**Two sources.** Sauron ships a small core of orchestration skills
+(`validator`, `pal-router`, `debate-review`, `babysit-pr`) that stay in-repo,
+and automatically imports the offensive-security playbooks from
+[`crowx01/Pentesting-Skills`](https://github.com/crowx01/Pentesting-Skills)
+during install. That repo is cached at
+`~/.cache/sauron/pentesting-skills/` (override via
+`SAURON_PENTESTING_SKILLS_REPO` and `SAURON_PENTESTING_SKILLS_CACHE`).
+
+**Where they go per agent.**
+
+| Agent | Skills destination | Rules destination |
+|-------|--------------------|-------------------|
+| Claude Code | `~/.claude/skills/` (or `./.claude/skills/` per-project) | `~/.claude/settings.json` |
+| Cursor | `./skills-cursor/` | `./rules/sauron.mdc` |
+| Cline | `./sauron-skills/` | `./.clinerules` |
+| Codex CLI | `~/.codex/sauron-skills/` | `~/.codex/instructions.md` |
+| Aider | `./sauron-skills/` | `./.aider.sauron.md` |
+| Generic | `./sauron-skills/` | `./SYSTEM_PROMPT.sauron.md` |
+
+**Sauron installation flow (what happens automatically):**
+
+```text
+Sauron installation
+        │
+        ├── Install Sauron rules/settings
+        ├── Configure CLAUDE.md doctrine
+        ├── Install shipped skills (validator, pal-router, …)
+        └── Import & sync pentesting-skills
+                    │
+                    ▼
+             pentesting-skills
+             cache: ~/.cache/sauron/pentesting-skills
+                    │
+                    ├── Claude   (symlink into ~/.claude/skills/)
+                    ├── Cursor   (copy into ./skills-cursor/)
+                    └── Other    (copy into ./sauron-skills/)
+```
+
+**Add a single skill after install.**
+
+```bash
+npx sauron add sqli            # or: ./setup.sh add sqli
+npx sauron list                # shipped + pentesting-skills catalog
+npx sauron sync                # refresh pentesting-skills + re-link everything
+```
+
+`add` first looks in `skills/` (shipped), then falls back to the
+pentesting-skills cache, so both sources share the same command.
+
+**Add your own skill.** Drop a `skills/<your-skill>/SKILL.md` and re-run
+`./setup.sh sync`. To publish it broadly, upstream a PR to
+[`Pentesting-Skills`](https://github.com/crowx01/Pentesting-Skills) instead —
+`sync` picks it up on the next run.
+
+**Update / remove.** Shipped skills are symlinked (Claude Code) or rsynced
+(other agents). Delete the source and re-run `sync` to remove; pull upstream
+and re-run `sync` to update. Local edits to synced copies survive `sync`
+unless upstream also modified the same file.
+
+### Skills workflow
+
+```mermaid
+flowchart TD
+    A[sauron skills/<br/>shipped core] --> C
+    B[crowx01/Pentesting-Skills<br/>upstream repo] -->|git clone/pull| B2[~/.cache/sauron/<br/>pentesting-skills]
+    B2 --> C[Installation +<br/>Synchronization<br/>setup.sh / npx sauron]
+    C --> D1[Claude Code<br/>~/.claude/skills/<br/>symlinks]
+    C --> D2[Cursor<br/>./skills-cursor/<br/>./rules/*.mdc]
+    C --> D3[Cline / Codex /<br/>Aider / Generic<br/>./sauron-skills/]
+    E[npx sauron<br/>add SKILL] -.->|later| C
+    F[npx sauron sync] -.->|refresh cache| B2
+```
+
+<details><summary>ASCII fallback (renders where Mermaid is stripped)</summary>
+
+```text
+   ┌──────────────────────┐    ┌─────────────────────────────┐
+   │ sauron skills/       │    │ crowx01/Pentesting-Skills   │
+   │ shipped core         │    │ (upstream)                  │
+   └──────────┬───────────┘    └───────────┬─────────────────┘
+              │                             │ git clone / pull
+              │                             ▼
+              │                 ┌─────────────────────────┐
+              │                 │ ~/.cache/sauron/        │
+              │                 │  pentesting-skills      │
+              │                 └───────────┬─────────────┘
+              │                             │
+              ▼                             ▼
+     ┌──────────────────────────────────────────────────┐
+     │  Installation + Synchronization                  │
+     │  setup.sh  /  npx sauron  /  npx sauron sync     │
+     └───────┬──────────────┬──────────────┬────────────┘
+             │              │              │
+             ▼              ▼              ▼
+   ┌─────────────┐ ┌────────────────┐ ┌───────────────────────┐
+   │ Claude Code │ │ Cursor         │ │ Cline / Codex /       │
+   │ ~/.claude/  │ │ ./skills-      │ │ Aider / Generic       │
+   │  skills/    │ │  cursor/       │ │ ./sauron-skills/      │
+   │ (symlinks)  │ │ ./rules/*.mdc  │ │                       │
+   └─────────────┘ └────────────────┘ └───────────────────────┘
+```
+
+</details>
+
+> Prefer to skip the wizard? Copy `settings.example.json` to
+> `~/.claude/settings.json` and edit it by hand. `setup.sh` is just a
+> friendlier way to produce the same file.
 
 Then restart your orchestrator.
 

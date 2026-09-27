@@ -1,0 +1,30 @@
+{
+  "name": "sauron",
+  "version": "1.0.0",
+  "description": "Interactive installer + pentesting-skills registry for the sauron offensive-security AI orchestrator framework.",
+  "bin": {
+    "sauron": "bin/cli.js"
+  },
+  "scripts": {
+    "test": "bash bin/setup-lib.sh && echo lib-syntax-ok"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "license": "MIT",
+  "keywords": ["ai", "claude", "cursor", "bug-bounty", "pentest", "skills", "installer"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/crowx01/sauron"
+  },
+  "files": [
+    "bin/",
+    "skills/",
+    "docs/",
+    "setup.sh",
+    "settings.example.json",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_LICENSES.md"
+  ]
+}
