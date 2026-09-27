@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<!--
+  sauron install walkthrough — WeasyPrint source.
+  Regenerate the PDF with:
+     weasyprint docs/install-walkthrough.html docs/install-walkthrough.pdf
+  Keep this .html in sync with docs/WORKFLOW.md and setup.sh.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>sauron install walkthrough</title>
+<style>
+  @page {
+    size: A4;
+    margin: 16mm 15mm 18mm 15mm;
+    background: #0a0503;
+    @bottom-right {
+      content: counter(page) " / " counter(pages);
+      color: #b0683c;
+      font: 9px "DejaVu Sans Mono", monospace;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -weasy-hyphens: none; }
+  body {
+    margin: 0;
+    background: #0a0503;
+    color: #f5e6d8;
+    font-family: "DejaVu Sans", "Helvetica", sans-serif;
+    font-size: 10.5px;
+    line-height: 1.5;
+  }
+  h1, h2, h3 { font-weight: 700; line-height: 1.15; color: #ff8a3c; }
+  h1 { font-size: 26px; letter-spacing: 3px; margin: 0 0 2px; color: #ff5a1a; }
+  h2 {
+    font-size: 15px; margin: 22px 0 8px; color: #ffb066;
+    border-bottom: 1px solid #7a2f10; padding-bottom: 4px; letter-spacing: .5px;
+  }
+  h3 { font-size: 12px; margin: 14px 0 4px; color: #ff8a3c; }
+  p { margin: 6px 0; }
+  a { color: #ff8a3c; text-decoration: none; }
+  code { font-family: "DejaVu Sans Mono", monospace; color: #ffd7a8; font-size: 9.5px; }
+  .muted { color: #b0683c; }
+  .ember { color: #ff5a1a; }
+  .amber { color: #ffb347; }
+
+  .cover {
+    page-break-after: always;
+    padding-top: 30mm;
+    text-align: center;
+  }
+  .eye {
+    font-family: "DejaVu Sans Mono", monospace;
+    color: #ff5a1a;
+    font-size: 11px;
+    line-height: 1.15;
+    white-space: pre;
+    margin: 0 auto 14px;
+    text-shadow: 0 0 6px rgba(255,90,26,.5);
+  }
+  .kicker {
+    display: inline-block; margin: 8px 0 0;
+    background: #7a1500; color: #ffd7a8;
+    padding: 3px 12px; border-radius: 12px;
+    font: 700 10px/1 "DejaVu Sans Mono", monospace; letter-spacing: 1px;
+  }
+  .subtitle { color: #ffb066; font-size: 13px; letter-spacing: 2px; margin-top: 10px; }
+  .tagline { color: #b0683c; font-style: italic; margin-top: 4px; }
+
+  .callout {
+    border-left: 3px solid #ff5a1a;
+    background: #160b06;
+    padding: 8px 12px;
+    margin: 12px 0;
+    border-radius: 0 6px 6px 0;
+    font-size: 9.8px;
+    color: #e8cbb0;
+  }
+  .callout b { color: #ffb347; }
+
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 9.6px; }
+  td { vertical-align: top; padding: 5px 8px; border-bottom: 1px solid #2a1509; }
+  td.key {
+    width: 34px; color: #ff5a1a; font-family: "DejaVu Sans Mono", monospace;
+    font-weight: 700; text-align: center;
+  }
+  td.name { width: 150px; color: #ffd7a8; font-family: "DejaVu Sans Mono", monospace; }
+
+  pre.term {
+    background: #050302;
+    border: 1px solid #3a1c0c;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-family: "DejaVu Sans Mono", monospace;
+    font-size: 8.4px;
+    line-height: 1.4;
+    color: #e8cbb0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+  pre.banner {
+    background: transparent; border: 0; color: #ff5a1a;
+    font-size: 8px; line-height: 1.05; text-align: center;
+    text-shadow: 0 0 5px rgba(255,90,26,.45);
+  }
+  .ok { color: #7bd88f; }
+  .warn { color: #ffb347; }
+  .prompt { color: #ff8a3c; }
+  .section { page-break-inside: avoid; }
+  .pagebreak { page-break-before: always; }
+  .foot {
+    margin-top: 18px; border-top: 1px solid #3a1c0c; padding-top: 6px;
+    font-size: 9px; color: #b0683c;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<div class="cover">
+  <div class="eye">          .-~~~-.
+        .(   o    ).
+         ~-...-~</div>
+  <pre class="banner">███████╗ █████╗ ██╗   ██╗██████╗  ██████╗ ███╗   ██╗
+██╔════╝██╔══██╗██║   ██║██╔══██╗██╔═══██╗████╗  ██║
+███████╗███████║██║   ██║██████╔╝██║   ██║██╔██╗ ██║
+╚════██║██╔══██║██║   ██║██╔══██╗██║   ██║██║╚██╗██║
+███████║██║  ██║╚██████╔╝██║  ██║╚██████╔╝██║ ╚████║
+╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝</pre>
+  <h1>SAURON</h1>
+  <div class="subtitle">SETUP WALKTHROUGH</div>
+  <div class="kicker">NOW CUTS HOOK OVERHEAD 85%</div>
+  <div class="tagline">one agent to route them all</div>
+</div>
+
+<!-- ============ PAGE: overview + orchestrator ============ -->
+<div class="section">
+  <p>The installer runs end-to-end. Prompt 0 picks the orchestrator (claude, cursor, cline, codex,
+  aider or generic). Prompt 7 collects API keys with per-provider instructions and writes a
+  <code>0600 .env</code>. Setup now also writes a <code>CLAUDE.md</code> doctrine file that is
+  auto-loaded and prompt-cache friendly, so the routing map, keep-in-Claude rules, and 4-step
+  pipeline never re-inject on every message. Multi-framework users get a lean, sibling-detected
+  block that skips shared sections. Measured: <b class="amber">85% cut in hook overhead</b> vs the
+  prior version on a 50-message session.</p>
+
+  <div class="callout">
+    <b>What changed since the last PDF:</b> SessionStart shrank from ~1500 to ~250 bytes (routing
+    map moved to CLAUDE.md). UserPromptSubmit dropped from ~820 to ~70 bytes per message.
+    CLAUDE.md carries the doctrine once and Claude Code caches it for one hour. The pal-router
+    skill gained 11 token-efficiency rules (auto-compress outputs over 5&nbsp;KB, batch PAL calls,
+    { claim, confidence, source_span } triples, in-conversation failure-map, diff-first, response
+    terseness ladder). Sibling detection dedups doctrine when both sauron and let-there-be-light
+    are installed. <b>PAL now installs from crowx01/pal-mcp-server</b> — the routing-enhanced fork.
+  </div>
+
+  <h2>1. The orchestrator choice</h2>
+  <table>
+    <tr><td class="key">c</td><td class="name">claude-code (default)</td><td>writes <code>~/.claude/settings.json</code> hooks + symlinks skills into <code>~/.claude/skills/</code></td></tr>
+    <tr><td class="key">r</td><td class="name">cursor</td><td>writes <code>./.cursor/rules/sauron.mdc</code> with <code>alwaysApply:true</code>; copies skills alongside</td></tr>
+    <tr><td class="key">l</td><td class="name">cline</td><td>writes <code>./.clinerules</code> (or <code>~/.clinerules</code>); copies skills alongside</td></tr>
+    <tr><td class="key">x</td><td class="name">codex-cli</td><td>writes <code>~/.codex/instructions.md</code>; copies skills into <code>~/.codex/sauron-skills/</code></td></tr>
+    <tr><td class="key">a</td><td class="name">aider</td><td>writes <code>./.aider.sauron.md</code>; add to <code>.aider.conf.yml</code> as <code>read:</code></td></tr>
+    <tr><td class="key">g</td><td class="name">generic</td><td>writes <code>./SYSTEM_PROMPT.sauron.md</code> you paste into any tool; copies skills alongside</td></tr>
+  </table>
+</div>
+
+<!-- ============ PAGE: terminal session ============ -->
+<div class="pagebreak"></div>
+<h2>2. The terminal session (Claude Code path)</h2>
+<pre class="banner">      .-~~~-.
+    .(   o    ).
+     ~-...-~
+
+interactive setup  ·  one agent to route them all</pre>
+
+<pre class="term"><span class="prompt">0. Which agent orchestrator do you use?</span>
+  c) claude-code     (default)  full: hooks + Skill() invocations + delegate policy
+  r) cursor                     writes .cursor/rules/FRAMEWORK.mdc (alwaysApply)
+  l) cline                      writes .clinerules with the delegate policy
+  x) codex-cli (OpenAI)         writes ~/.codex/instructions.md
+  a) aider                      writes .aider.conf.yml + FRAMEWORK.md conventions
+  g) generic / other            writes SYSTEM_PROMPT.md you paste into any tool
+<span class="ok">✓ orchestrator: c</span>
+
+<span class="prompt">1. Where should it install?</span>
+  g) global      → ~/.claude/settings.json      (loads every session, every project)
+  p) per-project → $PWD/.claude/settings.json   (only loads when Claude Code runs here)
+  s) skip        → print the settings JSON to stdout, do not write anything
+
+<span class="prompt">2. Which skills should auto-load at session start?</span>
+  These are invoked as the very first tool calls of every session.
+  Leave blank to skip a skill; type y to include it.
+
+<span class="prompt">3. Which PAL models should be listed in the delegate-first policy?</span>
+  Pick every model your PAL install actually has keys for.
+  Unselected models are dropped from the routing map so Claude never tries them.
+
+Ready to write ~/.claude/settings.json
+  Existing file will be backed up with .bak.&lt;timestamp&gt; suffix.
+<span class="ok">✓ wrote ~/.claude/settings.json</span>
+<span class="ok">✓ wrote CLAUDE.md doctrine: ~/CLAUDE.md</span>
+<span class="ok">✓ wrote env template: ~/.claude/.env.sauron.example</span>
+
+<span class="prompt">7. Enter API keys now to complete installation?</span>
+  Skip and edit .env.sauron.example later, or enter them now to have a real
+  .env.sauron written with 0600 permissions.
+
+<span class="prompt">Next steps</span>
+  1. Register PAL as an MCP server in ~/.claude.json (setup.sh does this for you
+     on the claude-code path):
+     "mcpServers": { "pal": { "type": "stdio",
+        "command": "/path/to/pal-mcp-server/.pal_venv/bin/python",
+        "args": ["/path/to/pal-mcp-server/server.py"],
+        "env": { ...keys... } } }
+  2. Source your API keys: source ~/.claude/.env.sauron  (after editing it)
+  3. Restart Claude Code.
+  4. On the next session start the auto-invoked skills fire immediately.
+
+<span class="ok">✓ sauron setup complete.</span></pre>
+
+<!-- ============ PAGE: what Claude sees ============ -->
+<div class="pagebreak"></div>
+<h2>3. What Claude sees at the next session start (now lean)</h2>
+<p>The SessionStart hook fires before Claude responds. Its payload is injected into context. The
+full doctrine now lives in <code>CLAUDE.md</code>, so the hook is just a pointer.</p>
+
+<h3>SessionStart · additionalContext (163 bytes)</h3>
+<pre class="term">Doctrine + routing map are in CLAUDE.md at the project root (already loaded).
+Preload skills now: `caveman` (full mode), `pentesting-agent`, `validator` (preload).</pre>
+
+<h3>UserPromptSubmit · additionalContext (69 bytes, every message)</h3>
+<pre class="term">Doctrine active from CLAUDE.md. Delegate + failover. Batch PAL calls.</pre>
+
+<div class="callout">
+  <b>Why it is cheap:</b> the routing map, keep-in-Claude list, failover doctrine, 4-step pipeline,
+  and the 11 token-efficiency rules moved into CLAUDE.md. Claude Code auto-loads that file into the
+  system prompt and caches it for one hour. On message 2 through N in the same session you pay
+  <b>0 tokens</b> for it. The prior version re-injected all of it on every user message.
+</div>
+
+<!-- ============ PAGE: doctrine ============ -->
+<div class="pagebreak"></div>
+<h2>4. The CLAUDE.md doctrine file (4390 bytes, loaded once)</h2>
+<p>Setup writes this alongside <code>settings.json</code>. It sits inside a
+<code>&lt;!-- BEGIN sauron doctrine --&gt;</code> managed block so re-running <code>setup.sh</code> is
+idempotent. When both sauron and let-there-be-light are installed, the second one detects its
+sibling and writes a lean block that skips the shared sections.</p>
+
+<pre class="term">&lt;!-- BEGIN sauron doctrine (managed by setup.sh; regenerate to update) --&gt;
+# sauron doctrine
+
+## Delegate-first routing
+groq (gpt-oss-120b, ~500 rpm, 8000 tpm cap) for report writing, vuln explanations, and
+skeptical validation. nemotron (nvidia, 1M ctx) for bulk reading of large files. grok
+(x-ai, 2M ctx) for permissive high-context security reasoning when Gemini refuses. flash
+(gemini-3.6-flash, 1M ctx) for fast structured extraction. or-free (OpenRouter meta-router,
+200K ctx) as generalist fallback. pro (gemini-3.1-pro-preview) for deep-reasoning fallback
+and adversarial debate via mcp__pal__challenge.
+
+## Keep in Claude ONLY
+- user-facing decisions
+- exploitation choices, severity calls
+- safety-boundary checks (no 3rd-party data, no destructive actions, no account creation)
+- side-effecting actions
+- tool-sequence orchestration
+
+## Failover
+Any model refusal or error routes to the next model in the map. A classifier refusal is a
+routing problem, not a stop.
+
+## 4-step validation pipeline (per confirmed finding, before presenting or reporting)
+A. Stress-test via validator skill (false-positive check, reproducibility, evidence gaps,
+   confidence).
+B. Run the gap tests, negative controls, and live observations the validator flags.
+C. Adversarial challenge via mcp__pal__challenge (pro primary, groq fallback): challenge
+   severity, exploitability, chain viability, impact ceiling.
+D. Synthesize with confidence markers; groq drafts the report, Claude spot-checks
+   low-confidence claims only.
+
+## Token efficiency rules (this framework exists to cut Claude token cost)
+- Any tool output over 5 KB routes through nemotron (bulk) or flash (structured) for
+  summarization before Claude reads.
+- Batch related PAL sub-tasks into one structured call, not N separate ones.
+- PAL responses on factual output must include {claim, confidence, source_span} triples.
+- Never re-Read a file already Read this session; recall from conversation context.
+
+... [truncated for PDF; full file is 4390 bytes]</pre>
+
+<!-- ============ PAGE: files on disk ============ -->
+<div class="pagebreak"></div>
+<h2>5. Files on disk after install</h2>
+<pre class="term">.claude/
+.claude/.env.sauron.example
+.claude/settings.json
+CLAUDE.md</pre>
+
+<h3>.env.sauron.example (only the API keys your model picks need)</h3>
+<pre class="term"># sauron API keys - source this from your shell rc, or export before starting Claude Code.
+# Do NOT commit the real values.
+export GEMINI_API_KEY=your-gemini-key
+export OPENROUTER_API_KEY=your-openrouter-key
+export CUSTOM_API_URL=https://api.groq.com/openai/v1
+export CUSTOM_API_KEY=your-groq-key</pre>
+
+<div class="foot">
+  PAL server: <b>github.com/crowx01/pal-mcp-server</b> (routing-enhanced fork) ·
+  Repo: github.com/crowx01/sauron · Sibling: crowx01/let-there-be-light (dev-lifecycle)
+</div>
+
+</body>
+</html>
