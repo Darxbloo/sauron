@@ -531,12 +531,31 @@ register_pal() {
   fi
   [ -x "$PAL_DIR/.pal_venv/bin/python" ] || python3 -m venv "$PAL_DIR/.pal_venv"
   "$PAL_DIR/.pal_venv/bin/python" -m pip install -q -r "$PAL_DIR/requirements.txt"
+  # ship the agentic toolbelt config (safe read-only tools) if the user has none.
+  # bash is further limited to a read-only command allowlist baked into pal itself.
+  if [ ! -f "$HOME/.pal/toolbelt.json" ]; then
+    mkdir -p "$HOME/.pal"
+    cat > "$HOME/.pal/toolbelt.json" <<'TBJSON'
+{
+  "tools": [
+    {"name": "bash",      "enabled": true,  "sandbox": "readonly"},
+    {"name": "read_file", "enabled": true,  "sandbox": "readonly"},
+    {"name": "gh",        "enabled": true,  "sandbox": "readonly"},
+    {"name": "web_fetch", "enabled": true,  "sandbox": "readonly"},
+    {"name": "clink",     "enabled": false, "sandbox": "readonly"}
+  ]
+}
+TBJSON
+    ok "wrote default toolbelt config → ~/.pal/toolbelt.json"
+  fi
   [ -f "$HOME/.claude.json" ] || echo '{}' > "$HOME/.claude.json"
   local tmp; tmp="$(mktemp)"
+  # PAL_TOOLBELT=1 turns on the agentic tool-loop; smart-router features
+  # (self-heal, cache, classifier, refusal-memory, health-probe) default on in-code.
   jq --arg cmd "$PAL_DIR/.pal_venv/bin/python" --arg srv "$PAL_DIR/server.py" \
-    '.mcpServers = (.mcpServers // {}) | .mcpServers.pal = {type:"stdio", command:$cmd, args:[$srv], env:{DEFAULT_MODEL:"auto"}}' \
+    '.mcpServers = (.mcpServers // {}) | .mcpServers.pal = {type:"stdio", command:$cmd, args:[$srv], env:{DEFAULT_MODEL:"auto", PAL_TOOLBELT:"1"}}' \
     "$HOME/.claude.json" > "$tmp" && mv "$tmp" "$HOME/.claude.json"
-  ok "PAL registered (DEFAULT_MODEL=auto)"
+  ok "PAL registered (DEFAULT_MODEL=auto, toolbelt on)"
 }
 checkpoint pal_register "PAL MCP registration" register_pal
 

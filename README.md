@@ -127,7 +127,12 @@ handles the rest automatically: writes rules/settings, backs up existing files
 with `.bak.<timestamp>`, installs shipped skills into the right agent-specific
 directory, **auto-clones and syncs the [`Pentesting-Skills`](https://github.com/crowx01/Pentesting-Skills)
 repository into your agent's skills dir** (see below), and clones/registers the
-PAL MCP server if missing.
+PAL MCP server if missing. The registered PAL ships the smart-router
+(self-heal, response-cache, classifier, refusal-memory, health-probe — all
+on by default) and an opt-in **agentic toolbelt** (`PAL_TOOLBELT=1`, default
+config at `~/.pal/toolbelt.json`) that lets routed models call local
+read-only tools — `bash` (limited to a read-only command allowlist),
+`read_file`, `gh`, and `web_fetch` — during a turn.
 
 **Ctrl+C safe.** State is checkpointed at `$XDG_STATE_HOME/sauron/install-state`
 (default `~/.local/state/sauron/`). If the installer is interrupted, re-running
