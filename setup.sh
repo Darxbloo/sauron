@@ -250,7 +250,7 @@ if state_done models_pick && [ -n "$(state_get models_val)" ]; then
 else
   step "3. Which PAL models do you have keys for?"
   MODEL_LABELS=(
-    "groq       gpt-oss-120b     report writing, validation"
+    "groq       gpt-oss-120b     report writing, validation (+ qwen3 tool executor, same Groq key)"
     "nemotron   nvidia (OR)      bulk reading, 1M ctx"
     "grok       x-ai (OR)        permissive security reasoning, 1M ctx (paid)"
     "flash      gemini-3.6       structured extraction"
@@ -272,7 +272,7 @@ fi
 
 # ---------- routing sentence ----------
 ROUTING=""
-[ "$M_GROQ" = 1 ] && ROUTING+="groq (gpt-oss-120b, ~500 rpm, 8000 tpm cap) for report writing, vuln explanations, and skeptical validation. "
+[ "$M_GROQ" = 1 ] && { ROUTING+="groq (gpt-oss-120b, ~500 rpm, 8000 tpm cap) for report writing, vuln explanations, and skeptical validation; qwen3 (qwen/qwen3.8-27b via Groq) is the default tool executor for \`pal run\` and /tools (gpt-oss trips Groq's output parser on tool prompts). Delegate whole jobs with \`pal run --plan <file>\` (or \`--agent\` for heavy coding/tool work). "; }
 [ "$M_NEMO" = 1 ] && ROUTING+="nemotron (nvidia, 1M ctx) for bulk reading of large files. "
 [ "$M_GROK" = 1 ] && ROUTING+="grok (x-ai/grok-4.3, 1M ctx) for permissive high-context security reasoning when Gemini refuses. "
 [ "$M_FLSH" = 1 ] && ROUTING+="flash (gemini-3.6-flash, 1M ctx) for fast structured extraction. "
@@ -607,12 +607,15 @@ fi
 
 
 NEEDS_ENV=0
+M_OPENAI=0
 for f in "$M_GROQ" "$M_NEMO" "$M_GROK" "$M_FLSH" "$M_ORFR" "$M_PRO"; do
   [ "$f" = 1 ] && NEEDS_ENV=1
 done
 
 ENV_REAL=""; ENV_EXAMPLE=""
 if [ "$NEEDS_ENV" = 1 ]; then
+  read -rp "  Also configure an OpenAI key (optional, for gpt-5 tiers)? [y/N]: " _oa
+  [[ "${_oa:-n}" =~ ^[yY]$ ]] && M_OPENAI=1
   ENV_EXAMPLE="$(dirname "$TARGET")/.env.sauron.example"
   ENV_REAL="$(dirname "$TARGET")/.env.sauron"
   cat > "$ENV_EXAMPLE" <<EOF
@@ -620,6 +623,7 @@ if [ "$NEEDS_ENV" = 1 ]; then
 $( [ "$M_FLSH" = 1 ] || [ "$M_PRO" = 1 ] && echo "export GEMINI_API_KEY=your-gemini-key" )
 $( [ "$M_NEMO" = 1 ] || [ "$M_GROK" = 1 ] || [ "$M_ORFR" = 1 ] && echo "export OPENROUTER_API_KEY=your-openrouter-key" )
 $( [ "$M_GROQ" = 1 ] && printf '%s\n' "export CUSTOM_API_URL=https://api.groq.com/openai/v1" "export CUSTOM_API_KEY=your-groq-key" )
+$( [ "$M_OPENAI" = 1 ] && echo "export OPENAI_API_KEY=your-openai-key" )
 EOF
   ok "wrote env template: $ENV_EXAMPLE"
 fi
@@ -628,9 +632,9 @@ collect_keys() {
   [ "$NEEDS_ENV" = 1 ] || return 0
   step "API keys"
   say "  Enter each key now (visible as asterisks) or press ENTER to skip."
-  local GROQ_KEY="" OR_KEY="" GEMINI_KEY=""
+  local GROQ_KEY="" OR_KEY="" GEMINI_KEY="" OPENAI_KEY=""
   if [ "$M_GROQ" = 1 ]; then
-    info "Groq — https://console.groq.com/keys"
+    info "Groq (groq/gpt-oss + qwen3 default tool executor) — https://console.groq.com/keys"
     masked_read GROQ_KEY "    Groq API Key: "
     GROQ_KEY=$(printf '%s' "$GROQ_KEY" | tr -d '[:space:]')
   fi
@@ -644,6 +648,11 @@ collect_keys() {
     masked_read GEMINI_KEY "    Gemini API Key: "
     GEMINI_KEY=$(printf '%s' "$GEMINI_KEY" | tr -d '[:space:]')
   fi
+  if [ "$M_OPENAI" = 1 ]; then
+    info "OpenAI (optional, gpt-5 tiers) — https://platform.openai.com/api-keys"
+    masked_read OPENAI_KEY "    OpenAI API Key: "
+    OPENAI_KEY=$(printf '%s' "$OPENAI_KEY" | tr -d '[:space:]')
+  fi
   local umask_prev; umask_prev=$(umask); umask 077
   {
     [ "$M_FLSH" = 1 ] || [ "$M_PRO" = 1 ] && printf 'export GEMINI_API_KEY=%s\n' "${GEMINI_KEY:-your-gemini-key}"
@@ -652,6 +661,7 @@ collect_keys() {
       printf 'export CUSTOM_API_URL=https://api.groq.com/openai/v1\n'
       printf 'export CUSTOM_API_KEY=%s\n' "${GROQ_KEY:-your-groq-key}"
     fi
+    [ "$M_OPENAI" = 1 ] && printf 'export OPENAI_API_KEY=%s\n' "${OPENAI_KEY:-your-openai-key}"
   } > "$ENV_REAL"
   chmod 600 "$ENV_REAL"
   umask "$umask_prev"
