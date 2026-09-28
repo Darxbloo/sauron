@@ -30,6 +30,8 @@ If the task is a user-facing decision, an exploitation choice, a severity call, 
 - **or-free** (`openrouter/free` meta-router, 200K context). Generalist fallback.
 - **pro** (`gemini-3.1-pro-preview`, 1M context, alias `pro`). Deep reasoning and adversarial debate via `mcp__pal__challenge`.
 
+- **qwen3** (`qwen/qwen3.8-27b` via Groq). Default tool-executor for `/tools` and `pal run`. gpt-oss trips Groq's output parser on tool prompts (400 `output_parse_failed`), so tool loops go to qwen3; override with `PAL_CHAT_TOOLS_MODEL`.
+
 Full model matrix and aliases: [model-map.md](model-map.md).
 
 ## Failover doctrine
@@ -43,6 +45,22 @@ Preferred order per common task:
 3. **Report writing / skeptical validation**: `groq`, fallback `grok`.
 4. **Bulk reading of very large files**: `nemotron`, fallback `or-free`.
 5. **Deep adversarial reasoning**: `pro`, fallback `groq`.
+
+## The smarter pal CLI
+
+The local pal-mcp-server also ships a global `pal` CLI (`~/.local/bin/pal`). It is the delegation entry point:
+
+- **`pal run "<task>"`**: headless one-shot; runs with local tools, prints only the result. Flags: `--ro`, `--agent`, `--model <m>`, `--plan <file>`, `--max-steps N`, `--agent-role autonomous|edit|plan|review`, `--json`.
+- **`pal chat`**: interactive REPL with auto cheap/smart routing (`/smart`, `/cheap`) and per-command roles.
+  - `/tools <task>`: runs any command on the Kali box (nmap, nuclei, ...); `/tools:ro` is read-only allowlist.
+  - `/agent[:edit|:plan|:review] <task>`: real local Claude Code via clink.
+  - `/debate <q>`: one model READS the files, then a panel decides.
+  - `/delegate <model> <q>`: pin a model.
+- **`pal diag [--json]`**, **`pal distill [--with-lessons]`**, **`pal serve`**.
+
+**Plan-handoff doctrine.** Strongest delegation: write the plan to a file and run `pal run --plan file.md`. Hand off the whole job, take the result, do not babysit. Heavy coding/tool work: `pal run --agent` (`--agent-role autonomous` when it must run git/gh/network unattended). Bulk/read/report tasks still route to the cheaper models per the map above.
+
+**Guardrails built in.** An AUTHORIZATION preamble is prepended for `security_permissive` tasks (fewer groq/qwen3 refusals on authorized recon). Groq ITPM ≈ 7000, so the tool loop trims context to `PAL_TOOLS_CTX_CHARS` (default 16000). Routing learns from outcomes: `episode_store` (`~/.pal/episodes.jsonl`) → runtime `bandit` reorder → offline `pal distill` (human-gated proposals), plus a human-gated teacher `lesson_store`. Error-class-aware refusal penalties and self-heal probation stop one flaky provider being blacklisted for good.
 
 ## Wiring
 
