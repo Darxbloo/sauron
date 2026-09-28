@@ -48,6 +48,18 @@ you> deep-recon target.com
 6. If Gemini refuses a recon prompt, Claude re-routes to `grok` in the same message. No stop.
 7. Any narrative write-up gets drafted by `groq`. Claude then byte-checks every technical string in the draft against the raw evidence before letting it surface.
 
+### Smarter pal: hand off whole jobs
+
+The local `pal` CLI turns delegation into a hand-off instead of a chat.
+
+- **`pal run --plan plan.md`**: write the job as a plan file, run every step headless, get the result back. Do not babysit. Add `--agent` (or `--agent-role autonomous` for git/gh/network) for heavy coding work; `--ro` to keep it read-only.
+- **`/tools <task>`** (in `pal chat`): executes recon on the box itself (nmap, nuclei, ...). qwen3 is the default tool executor; `/tools:ro` limits to a read-only allowlist. Authorized-recon prompts get an AUTHORIZATION preamble, so groq/qwen3 stop refusing.
+- **`/agent[:edit|:plan|:review] <task>`**: a full local Claude Code sub-task via clink.
+- **`/debate <q>`**: one model reads the files first, then a panel decides.
+- **Learning loop**: every run lands in `~/.pal/episodes.jsonl`; a `bandit` reorders routing at runtime (with an exploration floor); `pal distill` emits human-gated routing-order proposals; a human-gated teacher `lesson_store` carries lessons. Refusal penalties are error-class-aware with self-heal probation, so one flaky provider is never permanently blacklisted.
+
+Groq ITPM ≈ 7000: the tool loop trims context to `PAL_TOOLS_CTX_CHARS` (default 16000).
+
 ## 4. When a confirmed finding lands (the 4-step pipeline)
 
 Every confirmed finding runs through the same loop before you see the report.
