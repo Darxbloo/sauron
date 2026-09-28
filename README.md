@@ -70,6 +70,10 @@ flowchart TD
 
 </details>
 
+### Smarter `pal` CLI
+
+The PAL fork also installs a global `pal` CLI. `pal run "<task>"` is a headless one-shot (`--ro`, `--agent`, `--model`, `--json`); **`pal run --plan plan.md`** hands a whole job off and returns only the result. `pal chat` adds `/tools` (run nmap/nuclei etc. on the box; **qwen3** on Groq is the default tool executor), `/agent` (full local Claude Code), and `/debate` (reads files, then a panel decides). Routing learns from outcomes (`pal distill`). Details: [pal-router](skills/pal-router/SKILL.md).
+
 Full matrix: [skills/pal-router/model-map.md](skills/pal-router/model-map.md).
 
 ## The 4-step validation pipeline
