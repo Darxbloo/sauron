@@ -252,7 +252,7 @@ else
   MODEL_LABELS=(
     "groq       gpt-oss-120b     report writing, validation"
     "nemotron   nvidia (OR)      bulk reading, 1M ctx"
-    "grok       x-ai (OR)        permissive security reasoning, 2M ctx"
+    "grok       x-ai (OR)        permissive security reasoning, 1M ctx (paid)"
     "flash      gemini-3.6       structured extraction"
     "or-free    OR meta-router   generalist fallback"
     "pro        gemini-3.1-pro   adversarial debate"
