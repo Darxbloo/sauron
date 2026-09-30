@@ -52,12 +52,29 @@ you> deep-recon target.com
 The local `pal` CLI turns delegation into a hand-off instead of a chat.
 
 - **`pal run --plan plan.md`**: write the job as a plan file, run every step headless, get the result back. Do not babysit. Add `--agent` (or `--agent-role autonomous` for git/gh/network) for heavy coding work; `--ro` to keep it read-only.
-- **`/tools <task>`** (in `pal chat`): executes recon on the box itself (nmap, nuclei, ...). qwen3 is the default tool executor; `/tools:ro` limits to a read-only allowlist. Authorized-recon prompts get an AUTHORIZATION preamble, so groq/qwen3 stop refusing.
+- **`/tools <task>`** (in `pal chat`): executes recon on the box itself (nmap, nuclei, ...), full-power by default; `/tools:ro` limits to a read-only allowlist. Authorized-recon prompts get an AUTHORIZATION preamble, so groq/qwen3 stop refusing.
 - **`/agent[:edit|:plan|:review] <task>`**: a full local Claude Code sub-task via clink.
-- **`/debate <q>`**: one model reads the files first, then a panel decides.
-- **Learning loop**: every run lands in `~/.pal/episodes.jsonl`; a `bandit` reorders routing at runtime (with an exploration floor); `pal distill` emits human-gated routing-order proposals; a human-gated teacher `lesson_store` carries lessons. Refusal penalties are error-class-aware with self-heal probation, so one flaky provider is never permanently blacklisted.
+- **`/debate <q>`**: quick take — one model reads the files first, then a 3-model panel decides. No gate, no persisted state.
+- **`/models`** (in `pal chat`) or **`pal models`**: the live capability catalog — what's actually reachable right now, not a static list.
+- **Chat input UX**: `pal chat` supports multiline input (`Alt+Enter`/`Ctrl+J` for a newline, plain `Enter` submits) and session-scoped history (`Up`/`Down`, or `Ctrl+P`/`Ctrl+N` regardless of cursor line) at `~/.pal/chat_history/<session_id>.jsonl` — one file per REPL run, so recall never crosses sessions. Every line is secret-masked before it touches disk, recall included.
+- **Learning loop**: every run lands in `~/.pal/episodes.jsonl`; a `bandit` reorders routing at runtime (with an exploration floor); `pal distill` emits human-gated routing-order proposals (never auto-applied); a human-gated teacher `lesson_store` carries routing-scope lessons only (classifier/prompt/tool-scope lessons are review-only; there's no transcript parser, so task content can't mint its own rule). Refusal penalties are error-class-aware with self-heal probation, so one flaky provider is never permanently blacklisted.
 
 Groq ITPM ≈ 7000: the tool loop trims context to `PAL_TOOLS_CTX_CHARS` (default 16000).
+
+### Capability routing, the tool-model pool, and always-on protections
+
+Four infra pieces sit underneath everything above, none of them a per-skill opt-in — they run inside PAL's provider layer on every call, so there is no configuration in this repo that skips them:
+
+- **Capability catalog.** Routing merges static per-provider config with a live `/models` discovery call (cached ~6h) into one record per (provider, model): confirmed `tools`/`structured_output`/`vision`/`reasoning`/`context_limit`/`availability`. Capabilities are a hard filter — a task needing `tools` never lands on a model the catalog can't confirm supports it. The name lists elsewhere in this repo (model-map.md, the routing map above) are fallback priors, not the decision itself. `pal models` / `/models` shows the live truth.
+- **Tool-capable model pool.** `/tools`, `/tools:full`, and `pal run`'s tool loop, plus the `/debate` reader and panel, all draw from an ordered, filtered pool of catalog `tools: true` models — not one hardcoded name. qwen3 stays the default front-of-pool (gpt-oss trips Groq's tool-call output parser), but a rate-limited or blacklisted model no longer stalls the loop; it auto-widens to the next candidate.
+- **Headroom.** Oversized tool/debate output (a big nuclei run, an sqlmap transcript, prior debate handoffs) is compressed to counts/uniques/head-tail before it reaches any model — canonical evidence and outbound tool-call arguments are excluded, fail-open on error, originals stay retrievable on disk.
+- **Guardrail (masking + inbound scan).** Every outbound call is credential/PII-masked (`Authorization` headers, JWTs, cloud keys, cookies, emails, ...) before it leaves the box; the per-call restore map lives in memory only, never logged or persisted. Every inbound model response is scanned for prompt-injection markers (instruction-override, role-override, prompt-leak, exfil asks) — `warn` (default) logs, `block` raises, `log` is silent. This is why a scraped page title or header value coming back through a model is safe to read: it's been through the scanner first.
+
+### Sequential debate + judge — `pal debate`
+
+`/debate` in `pal chat` is a quick opinion poll. For anything that needs an actual gate — a finding about to be submitted, a fix about to be merged — use `pal debate "<objective>" --criterion "..."` instead: a stateful **executor → reviewer(s) → judge** pipeline.
+
+Each iteration runs strictly in sequence: the executor does or revises the work and emits a structured JSON Handoff (actions taken, evidence, findings, acceptance-criteria verification, confidence); one or more reviewers critique that Handoff, flipping `verified: false` on any criterion lacking evidence; the judge rules `COMPLETE` or `CONTINUE`. The `COMPLETE` verdict is enforced in code, not trusted to the model's prose: it requires `completion_status == "review_ready"` AND every criterion `verified: true` with evidence AND zero open high/critical findings — anything short of that is downgraded to `CONTINUE` regardless of what the judge claims. A hard iteration cap (`PAL_DEBATE_MAX_ITER`, default 4) and no-progress detection (state fingerprint unchanged for N iterations) stop it from looping forever. Prior handoffs are Headroom-compressed before being resent so a long debate doesn't blow the context budget.
 
 ## 4. When a confirmed finding lands (the 4-step pipeline)
 
@@ -67,9 +84,9 @@ Every confirmed finding runs through the same loop before you see the report.
 
 **B. Gap tests.** You (or Claude via your tools) run every missing test, negative control, and live observation the validator flagged. Non-negotiable rules: no third-party PII, no destructive payloads, no account creation under your identity. If a gap cannot be closed without crossing a safety boundary, mark it explicitly in the final report rather than skipping.
 
-**C. Adversarial debate.** `mcp__pal__challenge` runs with `pro` (Gemini 3 Pro) as primary and `groq` as fallback. Framing is adversarial: attack the severity rating, exploitability under realistic attacker preconditions, chain viability, and impact ceiling.
+**C. Adversarial debate.** Quick pass: `mcp__pal__challenge` runs with `pro` (Gemini 3 Pro) as primary and `groq` as fallback, attacking the severity rating, exploitability under realistic attacker preconditions, chain viability, and impact ceiling. Preferred before submission: `pal debate "<finding>" --criterion "..."` — the gated executor→reviewer→judge pipeline, one criterion per claim, `COMPLETE` only when every criterion is verified with evidence and no high/critical finding is left open. Either way the finding text is masked outbound and the transcript inbound-scanned like every other PAL call.
 
-**D. Synthesize and write.** Validator output + gap-closing evidence + debate transcript are combined into a final finding. `groq` drafts the prose. You byte-check every technical string (hostnames, URLs, tokens, CVSS vectors, CWE, file paths) against the raw evidence. Only then does the report leave the desk, submitted by you under your identity.
+**D. Synthesize and write.** Validator output + gap-closing evidence + debate transcript (or `pal debate` Handoff history) are combined into a final finding. `groq` drafts the prose from a Headroom-compressed transcript (canonical evidence excluded from compression). You byte-check every technical string (hostnames, URLs, tokens, CVSS vectors, CWE, file paths) against the raw evidence. Only then does the report leave the desk, submitted by you under your identity.
 
 ## 5. Bonus: PR reviews via debate-review and babysit-pr
 
@@ -84,16 +101,23 @@ Both adapted from [amElnagdy/review-skills](https://github.com/amElnagdy/review-
 |---|---|---|
 | session start | enabled skills auto-invoke + MEMORY read | SessionStart hook |
 | every prompt | delegate-first + failover re-asserted | UserPromptSubmit hook |
-| any bulk read/write | routed to a PAL model per task type | pal-router skill |
-| any confirmed finding | 4-step pipeline before the report surfaces | validator skill |
+| any bulk read/write | routed to a PAL model per task type, catalog capability-filtered | pal-router skill |
+| any tool/`/tools`/`pal run` call | tool-capable model pool (not one hardcoded model) | pal-router skill / `tools_pool.py` |
+| any confirmed finding | 4-step pipeline before the report surfaces; Step C can use `pal debate` | validator skill |
+| any finding/fix needing a real gate | executor→reviewer→judge, `COMPLETE` enforced in code | `pal debate` |
+| any oversized tool/debate output | compressed to counts/uniques before a model sees it | Headroom (always on) |
+| every outbound/inbound model call | credential/PII masked out, injection markers scanned in | guardrail (always on) |
 | any PR to review | two-model debate + one review posted | debate-review skill |
 | any PR to babysit | verify, fix, reply, resolve, re-run | babysit-pr skill |
+| checking what's actually live | live capability catalog, not a static doc | `pal models` / `/models` |
 
-## The two invariants
+## The invariants
 
 > Delegate the prose, never the evidence.
 
 > A model refusal is a routing problem, not a stop.
+
+> PAL is the only path to a model — masking and inbound scanning run on every call, unconditionally; there is no configuration in this repo that bypasses them.
 
 ## Lifecycle at a glance
 
@@ -163,6 +187,9 @@ Both adapted from [amElnagdy/review-skills](https://github.com/amElnagdy/review-
 │      +---- structured     ->  PAL(flash) -> fallback or-free               │
 │      +---- report writeup ->  PAL(groq) -> Claude byte-checks              │
 │      +---- model refused? ->  auto re-route (never a stop)                 │
+│                                                                            │
+│    every hop: catalog capability-filtered, masked out/scanned in,         │
+│    Headroom-compressed if oversized -- unconditional, no bypass           │
 └────────────────────────────────────────────────────────────────────────────┘
                                     |
                                     v
@@ -174,7 +201,8 @@ Both adapted from [amElnagdy/review-skills](https://github.com/amElnagdy/review-
 │    B. Gap tests with your tools                                            │
 │       (no 3rd-party PII, no destructive, no account creation)              │
 │           |                                                                │
-│    C. mcp__pal__challenge(finding, model=pro; fallback=groq)               │
+│    C. quick: mcp__pal__challenge(finding, model=pro; fallback=groq)        │
+│       gated:  pal debate (executor->reviewer->judge, COMPLETE in code)     │
 │       adversarial: severity, exploitability, chain, impact ceiling         │
 │           |                                                                │
 │    D. Synthesize (validator + gap evidence + debate)                       │

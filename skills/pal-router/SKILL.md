@@ -29,9 +29,23 @@ If the task is a user-facing decision, an exploitation choice, a severity call, 
 - **or-free** (`openrouter/free` meta-router, 200K context). Generalist fallback.
 - **pro** (`gemini-3.1-pro-preview`, 1M context, alias `pro`). Deep reasoning and adversarial debate via `mcp__pal__challenge`.
 
-- **qwen3** (`qwen/qwen3.8-27b` via Groq). Default tool-executor for `/tools` and `pal run`. gpt-oss trips Groq's output parser on tool prompts (400 `output_parse_failed`), so tool loops go to qwen3; override with `PAL_CHAT_TOOLS_MODEL`.
+- **Tool-capable model pool** (was: qwen3 alone). `/tools`, `/tools:full` and `pal run`'s tool loop now draw from an ordered, filtered pool — not a single hardcoded model — so one rate-limited/blacklisted provider no longer stalls the loop. `qwen3` (`qwen/qwen3.8-27b` via Groq) is still the default first candidate (gpt-oss trips Groq's output parser on tool prompts, 400 `output_parse_failed`), but the pool widens automatically to any other model the catalog marks `tools: true`. Pin the front of the pool with `PAL_TOOLS_PRIMARY_MODEL` (or the legacy `PAL_CHAT_TOOLS_MODEL` alias), extend it with `PAL_TOOLS_MODELS`/`PAL_TOOLS_FALLBACK_MODELS`, or exclude a model with `PAL_TOOLS_BLOCKLIST`. Same pool mechanism backs the `/debate` reader (role `reviewer`) and panel (role `reasoner`).
+
+This list is a human-readable summary of defaults, not the source of truth — the source of truth is the live **capability catalog** (below). Run `pal models` or `/models` in `pal chat` any time to see exactly what's actually reachable right now, with real capability flags, not guesses.
 
 Full model matrix and aliases: [model-map.md](model-map.md).
+
+## Capability-aware routing (the catalog)
+
+Routing no longer trusts a static name list alone. `pal`'s model catalog merges the static per-provider config with a live `/models` discovery call per provider (rich capability+pricing data from OpenRouter, token limits from Gemini, ids-only from OpenAI/xAI/Groq — an unconfirmed capability stays `None` and is never guessed), cached on disk for ~6h. Every catalog entry carries `chat` / `tools` / `vision` / `structured_output` / `reasoning` / `context_limit` / `availability` (`available` / `no_auth` / `unhealthy` / `stale` / `discovered`) / `quality_profile` / `cost_profile`.
+
+What this changes for delegation:
+- Capabilities are a **hard filter**. If a task needs `tools` or `structured_output`, a model the catalog can't confirm supports it is never selected — no more routing a structured-extraction task to a model that happens to hallucinate free text instead.
+- Free-tier models are excluded from routing unless the category explicitly opts in (today: only `long_context_bulk`, i.e. the nemotron/or-free bulk-read lane) — so a cost-sensitive free model never silently wins a quality-sensitive slot.
+- The alias list above and the legacy category-preference lists are demoted to **tie-break priors and fallback**, not the primary decision. Routing itself only ever reads the on-disk cache, never the network, so a routing decision can't hang on a live discovery call.
+- `discovered` = a model the catalog found live but isn't curated for — it is visible in `pal models` for awareness but never auto-routed to.
+
+Check what's actually live before assuming a model in this doc is reachable: `pal models [--provider X] [--refresh] [--json] [--all]`, or `/models` inside `pal chat`.
 
 ## Failover doctrine
 
@@ -51,15 +65,24 @@ The local pal-mcp-server also ships a global `pal` CLI (`~/.local/bin/pal`). It 
 
 - **`pal run "<task>"`**: headless one-shot; runs with local tools, prints only the result. Flags: `--ro`, `--agent`, `--model <m>`, `--plan <file>`, `--max-steps N`, `--agent-role autonomous|edit|plan|review`, `--json`.
 - **`pal chat`**: interactive REPL with auto cheap/smart routing (`/smart`, `/cheap`) and per-command roles.
-  - `/tools <task>`: runs any command on the Kali box (nmap, nuclei, ...); `/tools:ro` is read-only allowlist.
+  - `/tools <task>`: runs any command on the Kali box (nmap, nuclei, ...) via the tool-capable model pool, full-power by default; `/tools:ro` is read-only allowlist.
   - `/agent[:edit|:plan|:review] <task>`: real local Claude Code via clink.
-  - `/debate <q>`: one model READS the files, then a panel decides.
+  - `/debate <q>`: quick take — one pool model READS the files, then a 3-model panel decides. Good for "what do you all think", not a gated pipeline.
   - `/delegate <model> <q>`: pin a model.
-- **`pal diag [--json]`**, **`pal distill [--with-lessons]`**, **`pal serve`**.
+  - `/models`: live capability catalog panel, in-REPL (same data as `pal models`).
+- **`pal debate "<objective>" [--criterion "..."]`**: the rigorous version — a stateful **executor → reviewer(s) → judge** pipeline, not a one-shot panel opinion. See below.
+- **`pal models [--provider X] [--refresh] [--json] [--all]`**, **`pal diag [--json]`**, **`pal distill [--with-lessons]`**, **`pal serve`**.
+- **Chat input**: multiline (`Alt+Enter`/`Ctrl+J` for a literal newline, plain `Enter` submits), session-scoped history (`Up`/`Down`/`Ctrl+P`/`Ctrl+N`) at `~/.pal/chat_history/<session_id>.jsonl` — every line is secret-masked (tokens/keys/JWTs/`Bearer ...`) before it ever touches disk, recall included.
 
 **Plan-handoff doctrine.** Strongest delegation: write the plan to a file and run `pal run --plan file.md`. Hand off the whole job, take the result, do not babysit. Heavy coding/tool work: `pal run --agent` (`--agent-role autonomous` when it must run git/gh/network unattended). Bulk/read/report tasks still route to the cheaper models per the map above.
 
-**Guardrails built in.** An AUTHORIZATION preamble is prepended for `security_permissive` tasks (fewer groq/qwen3 refusals on authorized recon). Groq ITPM ≈ 7000, so the tool loop trims context to `PAL_TOOLS_CTX_CHARS` (default 16000). Routing learns from outcomes: `episode_store` (`~/.pal/episodes.jsonl`) → runtime `bandit` reorder → offline `pal distill` (human-gated proposals), plus a human-gated teacher `lesson_store`. Error-class-aware refusal penalties and self-heal probation stop one flaky provider being blacklisted for good.
+**Sequential debate + judge (`pal debate`).** For anything that needs a real gate, not a vibe check: `pal debate "<objective>" --criterion "..."` runs a strict loop — the **executor** does/revises the work and emits a structured JSON Handoff, one or more **reviewers** critique that Handoff and flip `verified: false` on any criterion lacking evidence, and the **judge** rules `COMPLETE` or `CONTINUE`. The `COMPLETE` gate is enforced in code, not trusted to the model: `completion_status == "review_ready"` AND every acceptance criterion `verified: true` with evidence AND zero open high/critical findings — anything else is downgraded to `CONTINUE` regardless of what the judge's prose claims. Anti-loop: a hard iteration cap (`PAL_DEBATE_MAX_ITER`, default 4, ceiling 10) plus no-progress detection on a state fingerprint. Prior-iteration handoffs are Headroom-compressed before being resent so a long-running debate doesn't blow the context budget; the newest handoff always goes through verbatim. Use this — not `/debate` — for anything feeding the validator's Step C, or any finding you're about to submit.
+
+**Guardrails built in.** An AUTHORIZATION preamble is prepended for `security_permissive` tasks (fewer groq/qwen3 refusals on authorized recon). Groq ITPM ≈ 7000, so the tool loop trims context to `PAL_TOOLS_CTX_CHARS` (default 16000). Routing learns from outcomes: `episode_store` (`~/.pal/episodes.jsonl`) → runtime `bandit` reorder → offline `pal distill` (human-gated proposals, never auto-applied), plus a human-gated teacher `lesson_store` (routing-scope lessons only feed the distiller; classifier/prompt/tool-scope lessons are `human_review_only`, and there is no transcript/task-text parser, so task content can never mint itself a rule). Error-class-aware refusal penalties and self-heal probation stop one flaky provider being blacklisted for good.
+
+**Headroom (automatic context compression).** Every provider call passes large tool/debate output through Headroom between masking and the size-guard/send path: recon dumps, nuclei JSON, sqlmap transcripts, and prior debate handoffs above `PAL_HEADROOM_MIN_BYTES` (default 4000) get rewritten to counts/uniques/head-tail slices instead of being sent verbatim. It never touches anything tagged `canonical`/`evidence`/`poc`, never touches outbound tool-call arguments, and fails open (any internal error passes the original bytes through). Compressed originals stay retrievable (`~/.cache/pal/headroom/` by default) — this shrinks what a model sees, it never destroys the evidence chain the validator skill needs.
+
+**Masking & inbound scanning (guardrail) — always on, no bypass.** Every outbound provider call is walked by `guardrail.mask_outbound` first: credentials, `Authorization`/cookie headers, JWTs, cloud/API keys, and PII are replaced with `[REDACTED:<kind>:<n>]` placeholders before anything leaves the box; the restore map lives only in memory for that one call and is never logged, cached, or persisted. Responses are unmasked back for you to read. This runs at the provider layer (`gemini.py`, `openai_compatible.py`), not inside any one skill, so there is no code path that reaches a model without it. On the way back, `scan_inbound` flags prompt-injection markers (instruction-override phrasing, role-override attempts, chat-template tokens, prompt-leak asks, exfil instructions) in model output — `PAL_GUARDRAIL_INBOUND=warn` (default) logs and continues, `block` raises, `log` is silent-audit-only. This matters directly for recon: scraped target content (a page title, a header value, a JS string) that a model reads back to you is scanned before you trust it as an instruction.
 
 ## Wiring
 
@@ -67,6 +90,8 @@ The doctrine is enforced by two hooks in `~/.claude/settings.json`, both shipped
 
 - **SessionStart** auto-invokes the `caveman`, `pentesting-agent`, and `validator` skills at the start of every session.
 - **UserPromptSubmit** re-asserts the delegate-first + failover doctrine on every message so nothing drifts as sessions grow long.
+
+These two hooks are the only place doctrine can drift; catalog capability filters, the tool-model pool, Headroom, and the masking/inbound-scan guardrail are not hook-gated at all — they run inside `pal`'s provider layer on every single call regardless of which skill or hook fired. There is no configuration in this repo that skips them; PAL stays the only path to a model.
 
 ## Trigger phrases
 - "route this to a cheaper model"

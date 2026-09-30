@@ -37,10 +37,14 @@ Invoke the validator's own review over the finding. Produce twelve fields:
 Run every missing test, negative control, and live observation the validator flagged. Use my own tools. No shortcuts, no third-party PII, no destructive payloads, no account creation under my identity.
 
 ### Step C. Adversarial debate
-Route to `mcp__pal__challenge` with `pro` (Gemini 3 Pro) as primary and `groq` as fallback. Frame the debate adversarially: challenge severity, exploitability, chain viability, impact ceiling.
+Two routes, pick by how much rigor the finding needs:
+- **Quick adversarial pass:** `mcp__pal__challenge` with `pro` (Gemini 3 Pro) as primary and `groq` as fallback. Frame the debate adversarially: challenge severity, exploitability, chain viability, impact ceiling.
+- **Gated pipeline (preferred before submission):** `pal debate "<finding + claimed severity>" --criterion "..."` for one criterion per claim (e.g. "exploitability is at least Moderate under realistic attacker preconditions", "severity X is justified by target-specific impact, not generic CWE text"). This runs a stateful executor → reviewer(s) → judge loop and only returns `COMPLETE` when every criterion is `verified: true` with evidence and no open high/critical finding remains — the judge's `COMPLETE` claim is enforced in code, not trusted as prose, so a model can't hand-wave a pass. Prefer this over the quick pass for anything about to be submitted.
+
+Both routes run through PAL's always-on guardrail: any credential, token, or PII embedded in the finding is masked outbound before a debate model sees it, and the transcript is inbound-scanned for injection markers (relevant since a finding's PoC often quotes attacker-controlled input — a scraped page title, a header value, a JS string).
 
 ### Step D. Synthesize + write
-Combine validator output + gap-closing evidence + debate transcript. Delegate the prose to `groq` per the delegate-first doctrine. Human then verifies every technical string (hostnames, URLs, tokens, CVSS vectors, CWE, paths) byte-for-byte against raw evidence.
+Combine validator output + gap-closing evidence + debate transcript (quick-pass or `pal debate` Handoff history). Delegate the prose to `groq` per the delegate-first doctrine. Human then verifies every technical string (hostnames, URLs, tokens, CVSS vectors, CWE, paths) byte-for-byte against raw evidence. Long transcripts and prior debate handoffs reach `groq` already Headroom-compressed (counts/uniques, not truncation) — canonical evidence and PoC text are excluded from compression, so byte-for-byte verification is still against the real thing, not a summary.
 
 ## Anti-patterns
 - Never invent evidence to fill a gap.
@@ -50,7 +54,7 @@ Combine validator output + gap-closing evidence + debate transcript. Delegate th
 
 ## Related
 - Uses `debate-review` methodology adapted from https://github.com/amElnagdy/review-skills.
-- Feeds `pal-router` for model dispatch.
+- Feeds `pal-router` for model dispatch, capability-aware routing, and the `pal debate` gated pipeline.
 
 ## The rule
 > Delegate the prose, never the evidence.

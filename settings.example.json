@@ -14,7 +14,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"MANDATORY FIRST ACTIONS (every model, before responding): call Skill `caveman` (full mode), `pentesting-agent`, and `validator` (preload), then read the MEMORY.md index. Full doctrine + routing map are in CLAUDE.md at the project root (already auto-loaded, prompt-cached) so they are not repeated here. If the model changes mid-session, re-invoke the three skills.\"}}'"
+            "command": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"MANDATORY FIRST ACTIONS (every model, before responding): call Skill `caveman` (full mode), `pentesting-agent`, and `validator` (preload), then read the MEMORY.md index. Full doctrine + routing map are in CLAUDE.md at the project root (already auto-loaded, prompt-cached) so they are not repeated here. Routing is catalog-driven (run `pal models`/`/models` for live truth, not this hook) and every model call is unconditionally masked+scanned by PAL guardrail regardless of skill or hook -- nothing skips it. If the model changes mid-session, re-invoke the three skills.\"}}'"
           }
         ]
       }
@@ -24,7 +24,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"Every message, every model: DEFAULT TO PAL for each task — bulk read/extract/summarize to nemotron/flash, report-writing/vuln-explanation/validation to groq (full routing + keep-in-Claude list in CLAUDE.md). Pre-filter recon output locally first (bin/sauron-normalize, bin/strip-noise). Failover on refusal, never stop.\"}}'"
+            "command": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"Every message, every model: DEFAULT TO PAL for each task — bulk read/extract/summarize to nemotron/flash, report-writing/vuln-explanation/validation to groq (full routing + keep-in-Claude list in CLAUDE.md). Tool loops draw from the tool-capable model pool (qwen3 default, auto-widens on refusal/rate-limit), not one hardcoded model. For a real pass/fail on a finding use `pal debate` (executor->reviewer->judge, gated in code), not just `/debate`. Pre-filter recon output locally first (bin/sauron-normalize, bin/strip-noise); large tool/debate output is also auto-Headroom-compressed before it reaches a model. Failover on refusal, never stop.\"}}'"
           }
         ]
       }
