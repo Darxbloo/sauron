@@ -4,3 +4,5 @@
 labels_overlay.svg
 sauron_flux_clean*
 sauron_labeled_v*
+__pycache__/
+*.pyc

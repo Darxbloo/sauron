@@ -18,9 +18,13 @@ I built Sauron as a collection of skills that let my AI orchestrator become the 
 | Skill | Job | Source |
 |-------|-----|--------|
 | [`validator`](skills/validator/SKILL.md) | Skeptical QA reviewer that runs the 4-step validation pipeline before any finding is reported. | mine |
-| [`pal-router`](skills/pal-router/SKILL.md) | Delegate-first + failover doctrine for dispatching sub-tasks to cheaper or free PAL models. | mine |
+| [`pal-router`](skills/pal-router/SKILL.md) | Delegate-first + failover doctrine for dispatching sub-tasks to cheaper or free PAL models. Carries the error-class → model routing table. | mine |
+| [`kali-exec`](skills/kali-exec/SKILL.md) | Kali/Linux shell-execution doctrine: absolute paths, no `cd` persistence between tool calls, PEP 668 ladder, capability-first before install. | mine |
+| [`recovery`](skills/recovery/SKILL.md) | Failure classification + escalation chain. Replaces blind retry with classify → diagnose → independent recheck → escalate → verify, with bounded budgets. | mine |
 | [`debate-review`](skills/debate-review/SKILL.md) | Two-model debate review of a GitHub PR, GitLab MR, or Azure DevOps PR. Posts inline P0/P1/P2 comments from your own gh/glab/az. | adapted from [amElnagdy/review-skills](https://github.com/amElnagdy/review-skills) (MIT) |
 | [`babysit-pr`](skills/babysit-pr/SKILL.md) | Works PR review rounds automatically: verifies findings, fixes blockers, replies in-thread, resolves, re-runs. | adapted from [amElnagdy/review-skills](https://github.com/amElnagdy/review-skills) (MIT) |
+
+See [`docs/RELIABILITY.md`](docs/RELIABILITY.md) for the three-layer scope map (sauron = installer; Claude Code = orchestrator; PAL = runtime) and how a Kali run should flow under the new doctrine. Validate the shipped repo with `./setup.sh selftest` (or `npm test`): bash/python/node syntax, YAML frontmatter, JSON validity, and doctrine coverage, zero network.
 
 ## Model routing workflow
 
